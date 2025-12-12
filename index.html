@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EBM Collection App</title>
-    <!-- Cute kawaii cartoon baby milk bottle icon -->
     <link rel="icon" href="https://img.freepik.com/premium-vector/kawaii-cute-feeding-bottle-cartoon-vector-illustration_1120558-48308.jpg">
     <style>
         body { font-family: Arial, sans-serif; max-width: 500px; margin: 20px auto; padding: 20px; background: #f5f7fa; color: #333; }
@@ -14,29 +13,22 @@
         button { background: #4CAF50; color: white; border: none; cursor: pointer; margin-top: 20px; }
         button:hover { background: #45a049; }
         button.refresh { background: #9C27B0; }
-        button.refresh:hover { background: #7B1FA2; }
+        button.refresh:hover { background: #7B1D8F; }
         button.logout { background: #607D8B; }
-        button.logout:hover { background: #455A64; }
         button.delete { background: #f44336; margin-top: 10px; }
-        button.delete:hover { background: #d32f2f; }
         button.export { background: #2196F3; margin-top: 10px; }
-        button.export:hover { background: #1976D2; }
         .section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 20px; }
         #stats, #stash { margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px; font-size: 18px; }
         #stash { font-size: 24px; font-weight: bold; text-align: center; }
         .positive { color: #2e7d32; }
-        #login-section { display: block; }
-        #parent-section { display: none; }
-        #hcw-section { display: none; }
+        .instructions { font-size: 14px; color: #555; margin-top: 15px; background:#fff; padding:15px; border-radius:8px; }
         table { width: 100%; margin-top: 20px; border-collapse: collapse; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background: #f0f0f0; }
-        footer { text-align: center; margin-top: 40px; font-size: 12px; color: #777; }
-        .instructions { font-size: 14px; color: #555; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h1>🍼 EBM Collection App</h1>
+    <h1>EBM Collection App</h1>
 
     <!-- Login Section -->
     <div id="login-section" class="section">
@@ -45,121 +37,119 @@
         <input type="text" id="user-id" placeholder="e.g., CTM01">
 
         <label>Password:</label>
-        <input type="password" id="password" placeholder="Enter password">
-        
+        <input type="password" id="password">
+
         <button onclick="login()">Login</button>
-        <button onclick="registerParent()" style="background: #FFC107; margin-top: 10px;">Register as Parent/Bed</button>
+        <button onclick="registerParent()" style="background:#FFC107;margin-top:10px;">Register New Bed</button>
+
         <div class="instructions">
-            <p><strong>Registration Instructions:</strong></p>
-            <p>Username: Use the initial of your baby's name followed by the bed number. E.g., CTM01 for Baby of Chan Tai Man bed number 1, CTM101 for Baby of Chan Tai Man Twin 1 bed number 101.</p>
-            <p>Password: No restrictions—choose something easy to remember.</p>
+            <strong>How to create your ID</strong><br>
+            Use baby's name initials + bed number<br>
+            Examples: CTM01, LKM101, WXY08, ZZZ201<br>
+            Password: anything you like
         </div>
     </div>
 
     <!-- Parent Section -->
-    <div id="parent-section" class="section">
+    <div id="parent-section" class="section" style="display:none">
         <h2>Welcome, <span id="current-bed"></span></h2>
-        
+
         <div class="section">
             <h2>Log Today's EBM Provided</h2>
             <label>Volume per Bottle (ml):</label>
-            <input type="number" id="volume-per-bottle" min="0" step="1" placeholder="e.g., 50">
+            <input type="number" id="volume-per-bottle" min="1" step="1" placeholder="e.g., 60">
 
             <label>Number of Bottles:</label>
-            <input type="number" id="num-bottles" min="1" step="1" placeholder="e.g., 3">
-            
-            <button onclick="logProvision()">Submit Provision</button>
+            <input type="number" id="num-bottles" min="1" step="1" placeholder="e.g., 4">
+
+            <button onclick="logProvision()">Submit Bottles</button>
         </div>
 
-        <button class="refresh" onclick="showStats()">Refresh Stats</button>
+        <button class="refresh" onclick="showStats()">Refresh My Data</button>
         <button class="logout" onclick="logout()">Logout</button>
 
         <div id="stats"></div>
         <div id="stash">Today's Collected: 0 ml</div>
     </div>
 
-    <!-- Healthcare Worker Section -->
-    <div id="hcw-section" class="section">
+    <!-- HCW Section -->
+    <div id="hcw-section" class="section" style="display:none">
         <h2>Healthcare Worker Panel</h2>
-        
+
         <label>Select Bed:</label>
         <select id="hcw-bed-select"></select>
-        
-        <label>Update Daily Requirement: Volume per Feed (ml):</label>
-        <input type="number" id="hcw-volume-per-feed" min="0" step="1" placeholder="e.g., 10">
 
-        <label>Number of Feeds per Day:</label>
-        <input type="number" id="hcw-num-feeds" min="1" step="1" placeholder="e.g., 8">
-        
-        <button onclick="updateRequirement()">Update Requirement</button>
-        
-        <button class="delete" onclick="deleteBed()">Delete Selected Bed</button>
-        <button class="export" onclick="exportAllData()">Export All Data (CSV)</button>
-        <button class="refresh" onclick="refreshHcwPage()">Refresh Page</button>
-        
-        <h3>All Beds Overview</h3>
+        <label>Volume per Feed (ml):</label>
+        <input type="number" id="hcw-volume-per-feed" min="0" step="1">
+
+        <label>Feeds per Day:</label>
+        <input type="number" id="hcw-num-feeds" min="1" step="1">
+
+        <button onclick="updateRequirement()">Update Daily Requirement</button>
+        <button class="delete" onclick="deleteBed()">Delete Bed</button>
+        <button class="export" onclick="exportAllData()">Export CSV</button>
+        <button class="refresh" onclick="refreshHcwPage()">Refresh All Data Now</button>
+
+        <h3>Ward Overview</h3>
         <table id="beds-table">
-            <thead>
-                <tr>
-                    <th>Bed ID</th>
-                    <th>Daily Requirement</th>
-                    <th>Total Provided (ml)</th>
-                    <th>Today's Provided (ml)</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Bed ID</th><th>Daily Target</th><th>Total (ml)</th><th>Today (ml)</th></tr></thead>
             <tbody></tbody>
         </table>
-        
+
         <button class="logout" onclick="logout()">Logout</button>
     </div>
 
-    <footer>
-        Shared data via Firebase—syncs across devices!<br>
-        This is not medical advice — consult professionals.
-    </footer>
-
-    <!-- Firebase SDK (Compat for easy vanilla JS) -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // Replace with your Firebase config
-        const firebaseConfig = {
-            // Your config here, e.g., apiKey: "YOUR_API_KEY", etc.
-        };
+        // Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB223cqRnq49791LU9P7SU9TLJmYFkegJ4",
+  authDomain: "nicu-ebm-app.firebaseapp.com",
+  projectId: "nicu-ebm-app",
+  storageBucket: "nicu-ebm-app.firebasestorage.app",
+  messagingSenderId: "191753868886",
+  appId: "1:191753868886:web:972dfce99ff2c2edbd0df7"
+}
 
-        // Initialize Firebase
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         let currentUser = null;
-        const hcwPassword = 'hcwpass';  // Change this in production
+        const hcwPassword = "hcwpass";   // change this!
 
+        // ——— PARENT REGISTRATION ———
         function registerParent() {
-            const id = document.getElementById('user-id').value.trim();
+            const id = document.getElementById('user-id').value.trim().toUpperCase();
             const pass = document.getElementById('password').value;
-            if (!id || !pass) return alert('Enter Bed ID and password.');
-            if (id.toUpperCase() === 'HCW') return alert('HCW is reserved.');
-            db.collection('users').doc(id).get().then(doc => {
-                if (doc.exists) return alert('Bed ID already exists.');
-                db.collection('users').doc(id).set({
+            if (!id || !pass) return alert("Please fill both fields");
+            if (id === 'HCW') return alert("HCW is reserved");
+
+            db.collection("users").doc(id).get().then(docSnap => {
+                if (docSnap.exists) return alert("This Bed ID is already registered");
+
+                db.collection("users").doc(id).set({
                     password: pass,
                     volumePerFeed: 0,
                     numFeeds: 0,
                     provisions: []
                 }).then(() => {
-                    alert('Registered! Now login.');
+                    alert("Registered successfully! You can login now.");
                     document.getElementById('user-id').value = '';
                     document.getElementById('password').value = '';
                 });
             });
         }
 
+        // ——— LOGIN ———
         function login() {
-            let id = document.getElementById('user-id').value.trim();
+            let id = document.getElementById('user-id').value.trim().toUpperCase();
             const pass = document.getElementById('password').value;
-            
-            if (id.toUpperCase() === 'HCW' && pass === hcwPassword) {
+
+            if (id === 'HCW' && pass === hcwPassword) {
                 currentUser = 'hcw';
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('hcw-section').style.display = 'block';
@@ -167,19 +157,18 @@
                 updateBedsTable();
                 return;
             }
-            
-            db.collection('users').doc(id).get().then(doc => {
+
+            db.collection("users").doc(id).get().then(doc => {
                 if (!doc.exists || doc.data().password !== pass) {
-                    alert('Invalid ID or password.');
-                    return;
+                    return alert("Wrong ID or password");
                 }
                 currentUser = id;
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('parent-section').style.display = 'block';
                 document.getElementById('current-bed').textContent = id;
-                const volumePerFeed = doc.data().volumePerFeed || 0;
-                const numFeeds = doc.data().numFeeds || 0;
-                alert(`Welcome! Today's required feeding: ${volumePerFeed} ml for ${numFeeds} feeds per day.`);
+                const v = doc.data().volumePerFeed || 0;
+                const n = doc.data().numFeeds || 0;
+                alert(`Welcome!\nToday's target: ${v} ml × ${n} feeds`);
                 showStats();
             });
         }
@@ -189,148 +178,139 @@
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('parent-section').style.display = 'none';
             document.getElementById('hcw-section').style.display = 'none';
-            document.getElementById('user-id').value = '';
-            document.getElementById('password').value = '';
         }
 
-        function populateBedSelect() {
-            const select = document.getElementById('hcw-bed-select');
-            select.innerHTML = '<option value="">-- Select Bed --</option>';
-            db.collection('users').get().then(snapshot => {
-                snapshot.forEach(doc => {
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = doc.id;
-                    select.appendChild(option);
-                });
-            });
-        }
-
-        function updateRequirement() {
-            const bed = document.getElementById('hcw-bed-select').value;
-            if (!bed) return alert('Select a bed.');
-            const volumePerFeed = parseInt(document.getElementById('hcw-volume-per-feed').value);
-            const numFeeds = parseInt(document.getElementById('hcw-num-feeds').value);
-            if (isNaN(volumePerFeed) || volumePerFeed < 0 || isNaN(numFeeds) || numFeeds < 1) return alert('Enter valid volume and number of feeds.');
-            db.collection('users').doc(bed).update({
-                volumePerFeed: volumePerFeed,
-                numFeeds: numFeeds
-            }).then(() => {
-                alert(`Updated requirement for ${bed} to ${volumePerFeed} ml for ${numFeeds} feeds.`);
-                document.getElementById('hcw-volume-per-feed').value = '';
-                document.getElementById('hcw-num-feeds').value = '';
-                updateBedsTable();
-            }).catch(err => {
-                if (err.code === 'not-found') {
-                    if (!confirm(`Bed ${bed} does not exist. Create new? (Password: '1234')`)) return;
-                    db.collection('users').doc(bed).set({
-                        password: '1234',
-                        volumePerFeed: volumePerFeed,
-                        numFeeds: numFeeds,
-                        provisions: []
-                    }).then(() => {
-                        alert(`Created and updated ${bed}.`);
-                        populateBedSelect();
-                        updateBedsTable();
-                    });
-                } else {
-                    alert('Error: ' + err.message);
-                }
-            });
-        }
-
-        function deleteBed() {
-            const bed = document.getElementById('hcw-bed-select').value;
-            if (!bed) return alert('Select a bed to delete.');
-            if (!confirm(`Are you sure you want to delete ${bed}? This cannot be undone.`)) return;
-            db.collection('users').doc(bed).delete().then(() => {
-                alert(`${bed} deleted.`);
-                populateBedSelect();
-                updateBedsTable();
-            });
-        }
-
-        function exportAllData() {
-            db.collection('users').get().then(snapshot => {
-                let csv = 'Bed ID,Date,Volume per Bottle (ml),Number of Bottles,Total Amount (ml),Daily Requirement\n';
-                let hasData = false;
-                snapshot.forEach(doc => {
-                    const user = doc.data();
-                    user.provisions.forEach(p => {
-                        csv += `${doc.id},${p.date},${p.volumePerBottle},${p.numBottles},${p.amount},${user.volumePerFeed} ml x ${user.numFeeds} feeds\n`;
-                        hasData = true;
-                    });
-                });
-                if (!hasData) return alert('No data to export.');
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'ebm_all_data.csv';
-                a.click();
-                URL.revokeObjectURL(url);
-            });
-        }
-
-        function refreshHcwPage() {
-            populateBedSelect();
-            updateBedsTable();
-            alert('Page refreshed!');
-        }
-
-        function updateBedsTable() {
-            const tbody = document.querySelector('#beds-table tbody');
-            tbody.innerHTML = '';
-            const today = new Date().toISOString().slice(0, 10);
-            db.collection('users').get().then(snapshot => {
-                snapshot.forEach(doc => {
-                    const user = doc.data();
-                    const totalProvided = user.provisions.reduce((s, p) => s + p.amount, 0);
-                    const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
-                    
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td>${doc.id}</td><td>${user.volumePerFeed || 0} ml x ${user.numFeeds || 0} feeds</td><td>${totalProvided}</td><td>${todayProvided}</td>`;
-                    tbody.appendChild(row);
-                });
-            });
-        }
-
+        // ——— PARENT: LOG BOTTLES ———
         function logProvision() {
-            const volumePerBottle = parseFloat(document.getElementById('volume-per-bottle').value);
-            const numBottles = parseInt(document.getElementById('num-bottles').value);
-            if (isNaN(volumePerBottle) || volumePerBottle <= 0 || isNaN(numBottles) || numBottles < 1) return alert('Enter valid volume per bottle and number of bottles.');
-            const amount = volumePerBottle * numBottles;
-            const date = new Date().toISOString();
-            db.collection('users').doc(currentUser).update({
-                provisions: firebase.firestore.FieldValue.arrayUnion({ date, volumePerBottle, numBottles, amount })
+            const vol = parseFloat(document.getElementById('volume-per-bottle').value);
+            const num = parseInt(document.getElementById('num-bottles').value);
+            if (!vol || !num) return alert("Fill both fields");
+
+            const amount = vol * num;
+            const entry = {
+                date: new Date().toISOString(),
+                volumePerBottle: vol,
+                numBottles: num,
+                amount: amount
+            };
+
+            db.collection("users").doc(currentUser).update({
+                provisions: firebase.firestore.FieldValue.arrayUnion(entry)
             }).then(() => {
-                alert(`Submitted ${volumePerBottle} ml per bottle x ${numBottles} bottles = ${amount} ml total!`);
+                alert(`Success! Added ${vol} ml × ${num} bottles = ${amount} ml`);
                 document.getElementById('volume-per-bottle').value = '';
                 document.getElementById('num-bottles').value = '';
                 showStats();
             });
         }
 
+        // ——— PARENT: SHOW STATS ———
         function showStats() {
-            db.collection('users').doc(currentUser).get().then(doc => {
-                const user = doc.data();
-                const totalProvided = user.provisions.reduce((s, p) => s + p.amount, 0).toFixed(0);
-                const today = new Date().toISOString().slice(0, 10);
-                const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
-                const volumePerFeed = user.volumePerFeed || 0;
-                const numFeeds = user.numFeeds || 0;
+            db.collection("users").doc(currentUser).get().then(doc => {
+                const u = doc.data();
+                const total = u.provisions.reduce((s,p) => s + p.amount, 0);
+                const today = new Date().toISOString().slice(0,10);
+                const todayTotal = u.provisions.filter(p => p.date.startsWith(today)).reduce((s,p) => s + p.amount, 0);
 
                 document.getElementById('stats').innerHTML = `
-                    <strong>Today's Required:</strong> ${volumePerFeed} ml x ${numFeeds} feeds<br>
-                    <strong>Today's Provided:</strong> ${todayProvided} ml<br>
-                    <strong>Total Provided (All Time):</strong> ${totalProvided} ml<br>
-                    <strong>Entries:</strong> ${user.provisions.length}
+                    <strong>Today's Target:</strong> ${u.volumePerFeed||0} ml × ${u.numFeeds||0} feeds<br>
+                    <strong>Today's Provided:</strong> ${todayTotal} ml<br>
+                    <strong>Total Ever:</strong> ${total} ml<br>
+                    <strong>Entries:</strong> ${u.provisions.length}
                 `;
+                document.getElementById('stash').textContent = `Today's Collected: ${todayTotal} ml`;
+                document.getElementById('stash').className = todayTotal >= (u.volumePerFeed * u.numFeeds) ? 'positive' : '';
+            });
+        }
 
-                document.getElementById('stash').textContent = `Today's Collected: ${todayProvided} ml`;
-                document.getElementById('stash').className = todayProvided >= (volumePerFeed * numFeeds) ? 'positive' : '';
+        // ——— HCW FUNCTIONS ———
+        function populateBedSelect() {
+            const sel = document.getElementById('hcw-bed-select');
+            sel.innerHTML = '<option value="">-- Choose Bed --</option>';
+            db.collection("users").get().then(snap => {
+                snap.forEach(doc => {
+                    let opt = document.createElement('option');
+                    opt.value = doc.id;
+                    opt.textContent = doc.id;
+                    sel.appendChild(opt);
+                });
+            });
+        }
+
+        function updateRequirement() {
+            const bed = document.getElementById('hcw-bed-select').value;
+            const vol = parseInt(document.getElementById('hcw-volume-per-feed').value);
+            const feeds = parseInt(document.getElementById('hcw-num-feeds').value);
+            if (!bed || isNaN(vol) || isNaN(feeds)) return alert("Check all fields");
+
+            db.collection("users").doc(bed).set({
+                volumePerFeed: vol,
+                numFeeds: feeds
+            }, { merge: true }).then(() => {
+                alert(`Updated ${bed}: ${vol} ml × ${feeds} feeds`);
+                document.getElementById('hcw-volume-per-feed').value = '';
+                document.getElementById('hcw-num-feeds').value = '';
+                updateBedsTable();
+            });
+        }
+
+        function deleteBed() {
+            const bed = document.getElementById('hcw-bed-select').value;
+            if (!bed) return alert("Select a bed");
+            if (!confirm(`Delete ${bed} permanently?`)) return;
+            db.collection("users").doc(bed).delete().then(() => {
+                alert("Deleted");
+                populateBedSelect();
+                updateBedsTable();
+            });
+        }
+
+        function refreshHcwPage() {
+            populateBedSelect();
+            updateBedsTable();
+        }
+
+        function updateBedsTable() {
+            const tbody = document.querySelector('#beds-table tbody');
+            tbody.innerHTML = '';
+            const today = new Date().toISOString().slice(0,10);
+
+            db.collection("users").get().then(snap => {
+                s.forEach(doc => {
+                    const u = doc.data();
+                    const total = u.provisions.reduce((a,p) => a + p.amount, 0);
+                    const todayAmt = u.provisions.filter(p => p.date.startsWith(today)).reduce((a,p) => a + p.amount, 0);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${doc.id}</td>
+                        <td>${u.volumePerFeed||0} ml × ${u.numFeeds||0}</td>
+                        <td>${total}</td>
+                        <td>${todayAmt}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            });
+        }
+
+        function exportAllData() {
+            let csv = "Bed ID,Date,Volume per Bottle,Number of Bottles,Total ml,Daily Target\n";
+            db.collection("users").get().then(snap => {
+                snap.forEach(doc => {
+                    const u = doc.data();
+                    u.provisions.forEach(p => {
+                        csv += `${doc.id},${p.date},${p.volumePerBottle},${p.numBottles},${p.amount},${u.volumePerFeed}×${u.numFeeds}\n`;
+                    });
+                });
+                const blob = new Blob([csv], {type:'text/csv'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "EBM_Ward_Data.csv";
+                a.click();
             });
         }
     </script>
 </body>
 </html>
+
