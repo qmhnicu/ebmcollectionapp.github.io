@@ -99,35 +99,57 @@
     </div>
 
     <footer>
-        Data is saved in your browser for testing.<br>
+        Shared data via Firebase—syncs across devices!<br>
         This is not medical advice — consult professionals.
     </footer>
 
-    <script>
-        let appData = JSON.parse(localStorage.getItem('ebmAppData')) || { users: {}, hcwPassword: 'hcwpass' };
-        let currentUser = null;
+    <!-- Firebase SDK (Compat for easy vanilla JS) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
-        function saveData() {
-            localStorage.setItem('ebmAppData', JSON.stringify(appData));
-        }
+    <script>
+        // Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB223cqRnq49791LU9P7SU9TLJmYFkegJ4",
+  authDomain: "nicu-ebm-app.firebaseapp.com",
+  projectId: "nicu-ebm-app",
+  storageBucket: "nicu-ebm-app.firebasestorage.app",
+  messagingSenderId: "191753868886",
+  appId: "1:191753868886:web:972dfce99ff2c2edbd0df7"
+}
+
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        const hcwPassword = 'hcwpass';  // Change this in production
 
         function registerParent() {
             const id = document.getElementById('user-id').value.trim();
             const pass = document.getElementById('password').value;
             if (!id || !pass) return alert('Enter Bed ID and password.');
-            if (appData.users[id]) return alert('Bed ID already exists.');
-            appData.users[id] = { password: pass, requirement: 0, provisions: [] };
-            saveData();
-            alert('Registered! Now login.');
-            document.getElementById('user-id').value = '';
-            document.getElementById('password').value = '';
+            if (id.toUpperCase() === 'HCW') return alert('HCW is reserved.');
+            db.collection('users').doc(id).get().then(doc => {
+                if (doc.exists) return alert('Bed ID already exists.');
+                db.collection('users').doc(id).set({
+                    password: pass,
+                    requirement: 0,
+                    provisions: []
+                }).then(() => {
+                    alert('Registered! Now login.');
+                    document.getElementById('user-id').value = '';
+                    document.getElementById('password').value = '';
+                });
+            });
         }
 
         function login() {
             let id = document.getElementById('user-id').value.trim();
             const pass = document.getElementById('password').value;
             
-            if (id.toUpperCase() === 'HCW' && pass === appData.hcwPassword) {
+            if (id.toUpperCase() === 'HCW' && pass === hcwPassword) {
                 currentUser = 'hcw';
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('hcw-section').style.display = 'block';
@@ -136,18 +158,19 @@
                 return;
             }
             
-            if (!appData.users[id] || appData.users[id].password !== pass) {
-                alert('Invalid ID or password.');
-                return;
-            }
-            
-            currentUser = id;
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('parent-section').style.display = 'block';
-            document.getElementById('current-bed').textContent = id;
-            const req = appData.users[id].requirement || 0;
-            alert(`Welcome! Today's required milk volume for your baby: ${req} ml`);
-            showStats();
+            db.collection('users').doc(id).get().then(doc => {
+                if (!doc.exists || doc.data().password !== pass) {
+                    alert('Invalid ID or password.');
+                    return;
+                }
+                currentUser = id;
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('parent-section').style.display = 'block';
+                document.getElementById('current-bed').textContent = id;
+                const req = doc.data().requirement || 0;
+                alert(`Welcome! Today's required milk volume for your baby: ${req} ml`);
+                showStats();
+            });
         }
 
         function logout() {
@@ -162,11 +185,13 @@
         function populateBedSelect() {
             const select = document.getElementById('hcw-bed-select');
             select.innerHTML = '<option value="">-- Select Bed --</option>';
-            Object.keys(appData.users).sort().forEach(bed => {
-                const option = document.createElement('option');
-                option.value = bed;
-                option.textContent = bed;
-                select.appendChild(option);
+            db.collection('users').get().then(snapshot => {
+                snapshot.forEach(doc => {
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = doc.id;
+                    select.appendChild(option);
+                });
             });
         }
 
@@ -175,57 +200,75 @@
             if (!bed) return alert('Select a bed.');
             const req = parseInt(document.getElementById('hcw-requirement').value);
             if (isNaN(req) || req < 0) return alert('Enter valid requirement.');
-            appData.users[bed].requirement = req;
-            saveData();
-            alert(`Updated requirement for ${bed} to ${req} ml`);
-            document.getElementById('hcw-requirement').value = '';
-            updateBedsTable();
+            db.collection('users').doc(bed).update({ requirement: req }).then(() => {
+                alert(`Updated requirement for ${bed} to ${req} ml`);
+                document.getElementById('hcw-requirement').value = '';
+                updateBedsTable();
+            }).catch(err => {
+                if (err.code === 'NOT_FOUND') {
+                    if (!confirm(`Bed ${bed} does not exist. Create new? (Password: '1234')`)) return;
+                    db.collection('users').doc(bed).set({
+                        password: '1234',
+                        requirement: req,
+                        provisions: []
+                    }).then(() => {
+                        alert(`Created and updated ${bed}.`);
+                        populateBedSelect();
+                        updateBedsTable();
+                    });
+                } else {
+                    alert('Error: ' + err.message);
+                }
+            });
         }
 
         function deleteBed() {
             const bed = document.getElementById('hcw-bed-select').value;
             if (!bed) return alert('Select a bed to delete.');
             if (!confirm(`Are you sure you want to delete ${bed}? This cannot be undone.`)) return;
-            delete appData.users[bed];
-            saveData();
-            alert(`${bed} deleted.`);
-            populateBedSelect();
-            updateBedsTable();
+            db.collection('users').doc(bed).delete().then(() => {
+                alert(`${bed} deleted.`);
+                populateBedSelect();
+                updateBedsTable();
+            });
         }
 
         function exportAllData() {
-            let csv = 'Bed ID,Date,Amount Provided (ml),Daily Requirement (ml)\n';
-            Object.keys(appData.users).forEach(bed => {
-                const user = appData.users[bed];
-                user.provisions.forEach(p => {
-                    csv += `${bed},${p.date},${p.amount},${user.requirement || 0}\n`;
+            db.collection('users').get().then(snapshot => {
+                let csv = 'Bed ID,Date,Amount Provided (ml),Daily Requirement (ml)\n';
+                let hasData = false;
+                snapshot.forEach(doc => {
+                    const user = doc.data();
+                    user.provisions.forEach(p => {
+                        csv += `${doc.id},${p.date},${p.amount},${user.requirement || 0}\n`;
+                        hasData = true;
+                    });
                 });
+                if (!hasData) return alert('No data to export.');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ebm_all_data.csv';
+                a.click();
+                URL.revokeObjectURL(url);
             });
-            if (csv === 'Bed ID,Date,Amount Provided (ml),Daily Requirement (ml)\n') {
-                return alert('No data to export.');
-            }
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'ebm_all_data.csv';
-            a.click();
-            URL.revokeObjectURL(url);
         }
 
         function updateBedsTable() {
             const tbody = document.querySelector('#beds-table tbody');
             tbody.innerHTML = '';
             const today = new Date().toISOString().slice(0, 10);
-            
-            Object.keys(appData.users).sort().forEach(bed => {
-                const user = appData.users[bed];
-                const totalProvided = user.provisions.reduce((s, p) => s + p.amount, 0);
-                const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${bed}</td><td>${user.requirement || 0}</td><td>${totalProvided}</td><td>${todayProvided}</td>`;
-                tbody.appendChild(row);
+            db.collection('users').get().then(snapshot => {
+                snapshot.forEach(doc => {
+                    const user = doc.data();
+                    const totalProvided = user.provisions.reduce((s, p) => s + p.amount, 0);
+                    const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${doc.id}</td><td>${user.requirement || 0}</td><td>${totalProvided}</td><td>${todayProvided}</td>`;
+                    tbody.appendChild(row);
+                });
             });
         }
 
@@ -233,30 +276,36 @@
             const amount = parseFloat(document.getElementById('amount').value);
             if (isNaN(amount) || amount <= 0) return alert('Enter a valid amount.');
             const date = new Date().toISOString();
-            appData.users[currentUser].provisions.push({ date, amount });
-            saveData();
-            alert(`Submitted ${amount} ml for today!`);
-            document.getElementById('amount').value = '';
-            showStats();
+            db.collection('users').doc(currentUser).update({
+                provisions: firebase.firestore.FieldValue.arrayUnion({ date, amount })
+            }).then(() => {
+                alert(`Submitted ${amount} ml for today!`);
+                document.getElementById('amount').value = '';
+                showStats();
+            });
         }
 
         function showStats() {
-            const user = appData.users[currentUser];
-            const totalProvided = user.provisions.reduce((s, p) => s + p.amount, 0).toFixed(0);
-            const today = new Date().toISOString().slice(0, 10);
-            const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
-            const req = user.requirement || 0;
+            db.collection('users').doc(currentUser).get().then(doc => {
+                const user = doc.data();
+                const totalProvided = user.provisions.reduce((s, p) => s + p.amount, 0).toFixed(0);
+                const today = new Date().toISOString().slice(0, 10);
+                const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
+                const req = user.requirement || 0;
 
-            document.getElementById('stats').innerHTML = `
-                <strong>Today's Required:</strong> ${req} ml<br>
-                <strong>Today's Provided:</strong> ${todayProvided} ml<br>
-                <strong>Total Provided (All Time):</strong> ${totalProvided} ml<br>
-                <strong>Entries:</strong> ${user.provisions.length}
-            `;
+                document.getElementById('stats').innerHTML = `
+                    <strong>Today's Required:</strong> ${req} ml<br>
+                    <strong>Today's Provided:</strong> ${todayProvided} ml<br>
+                    <strong>Total Provided (All Time):</strong> ${totalProvided} ml<br>
+                    <strong>Entries:</strong> ${user.provisions.length}
+                `;
 
-            document.getElementById('stash').textContent = `Today's Collected: ${todayProvided} ml`;
-            document.getElementById('stash').className = todayProvided >= req ? 'positive' : '';
+                document.getElementById('stash').textContent = `Today's Collected: ${todayProvided} ml`;
+                document.getElementById('stash').className = todayProvided >= req ? 'positive' : '';
+            });
         }
     </script>
 </body>
 </html>
+
+
