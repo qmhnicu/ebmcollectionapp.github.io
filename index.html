@@ -9,20 +9,18 @@
         body{font-family:Arial,sans-serif;max-width:500px;margin:20px auto;padding:20px;background:#f5f7fa;color:#333}
         h1,h2{text-align:center;color:#2c3e50}
         label{display:block;margin-top:15px;font-weight:bold}
-        input,select,button{width:100%;padding:12px;margin-top:8px;border-radius:6px;border:1px solid #ccc;box-sizing:border-box;font-size:16px}
+        input,button{width:100%;padding:12px;margin-top:8px;border-radius:6px;border:1px solid #ccc;box-sizing:border-box;font-size:16px}
         button{background:#4CAF50;color:white;border:none;cursor:pointer;margin-top:20px}
         button:hover{background:#45a049}
         button.refresh{background:#9C27B0}
         button.logout{background:#607D8B}
-        button.delete{background:#f44336;margin-top:10px 0}
-        button.export{background:#2196F3;margin-top:10px}
         .section{background:white;padding:20px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);margin-top:20px}
-        #stats,#stash{margin-top:20px;padding:15px;background:#e8f5e9;border-radius:8px;font-size:18px}
-        #stash{font-size:24px;font-weight:bold;text-align:center}
+        #stats{margin-top:20px;padding:15px;background:#e8f5e9;border-radius:8px;font-size:18px}
+        #today-total{font-size:28px;font-weight:bold;text-align:center;margin:20px 0;color:#2e7d32}
         .positive{color:#2e7d32}
         .instructions{font-size:14px;color:#555;margin-top:15px;background:#fff;padding:15px;border-radius:8px}
         table{width:100%;margin-top:20px;border-collapse:collapse}
-        th,td{padding:10px;border:1px solid #ddd;text-align:left}
+        th,td{padding:10px;border:1px solid #ddd;text-align:center}
         th{background:#f0f0f0}
         .live{font-size:12px;color:#4CAF50;text-align:center;margin:10px 0}
     </style>
@@ -30,6 +28,7 @@
 <body>
     <h1>EBM Collection App</h1>
 
+    <!-- Login -->
     <div id="login-section" class="section">
         <h2>Login</h2>
         <label>ID (e.g., CTM01):</label>
@@ -40,30 +39,38 @@
         <button onclick="registerParent()" style="background:#FFC107;margin-top:10px;">Register New Bed</button>
 
         <div class="instructions">
-            <strong>How to create your ID</strong><br>
-            Baby's name initials + bed number<br>
-            Examples: CTM01, LKM101, 123, ABC08
+            <strong>ID = Baby initials + bed number</strong><br>
+            Examples: CTM01, LKM101, ABC08
         </div>
     </div>
 
+    <!-- Parent View -->
     <div id="parent-section" class="section" style="display:none">
         <h2>Welcome, <span id="current-bed"></span></h2>
+
         <div class="section">
-            <h2>Log Today's EBM</h2>
-            <label>Volume per Bottle (ml):</label>
-            <input type="number" id="volume-per-bottle" min="1" step="1" placeholder="60">
-            <label>Number of Bottles:</label>
-            <input type="number" id="num-bottles" min="1" step="1" placeholder="4">
-            <button onclick="logProvision()">Submit Bottles</button>
+            <h2>Today's EBM Provided</h2>
+            <label>Total volume prepared today (ml):</label>
+            <input type="number" id="today-ml" min="0" step="1" placeholder="e.g., 480">
+
+            <button onclick="saveTodayTotal()">Save Today's Total</button>
+            <p style="font-size:14px;color:#666;margin-top:10px">
+                You can change and re-save this number anytime today.<br>
+                It will overwrite the previous entry.
+            </p>
         </div>
-        <button class="refresh" onclick="showStats()">Refresh My Data</button>
+
+        <button class="refresh" onclick="loadTodayData()">Refresh</button>
         <button class="logout" onclick="logout()">Logout</button>
+
         <div id="stats"></div>
-        <div id="stash">Today's Collected: 0 ml</div>
+        <div id="today-total">Today's Total: 0 ml</div>
     </div>
 
+    <!-- HCW View -->
     <div id="hcw-section" class="section" style="display:none">
         <h2>Healthcare Worker Panel</h2>
+
         <label>Select Bed:</label>
         <select id="hcw-bed-select"></select>
 
@@ -72,15 +79,13 @@
         <label>Feeds per Day:</label>
         <input type="number" id="hcw-num-feeds" min="1" step="1">
 
-        <button onclick="updateRequirement()">Update Daily Requirement</button>
-        <button class="delete" onclick="deleteBed()">Delete Bed</button>
-        <button class="export" onclick="exportAllData()">Export CSV</button>
+        <button onclick="updateRequirement()">Update Target</button>
 
-        <div class="live" id="live-indicator">Live — updates automatically</div>
+        <div class="live">Live — updates in seconds</div>
 
-        <h3>Ward Overview</h3>
+        <h3>Ward Overview — Today Only</h3>
         <table id="beds-table">
-            <thead><tr><th>Bed ID</th><th>Daily Target</th><th>Total (ml)</th><th>Today (ml)</th></tr></thead>
+            <thead><tr><th>Bed ID</th><th>Target Today</th><th>Provided Today</th><th>Status</th></tr></thead>
             <tbody></tbody>
         </table>
 
@@ -92,7 +97,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // Your web app's Firebase configuration
+       // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyB223cqRnq49791LU9P7SU9TLJmYFkegJ4",
   authDomain: "nicu-ebm-app.firebaseapp.com",
@@ -108,26 +113,23 @@ const firebaseConfig = {
         let currentUser = null;
         const hcwPassword = "hcwpass";
 
-        // REAL-TIME LISTENER — THIS WAS THE MISSING LINE!
+        // Real-time update for HCW table
         db.collection("users").onSnapshot(() => {
-            if (currentUser === 'hcw') {
-                updateBedsTable();
-                document.getElementById('live-indicator').textContent = "Updated just now";
-                setTimeout(() => document.getElementById('live-indicator').textContent = "Live — updates automatically", 3000);
-            }
+            if (currentUser === 'hcw') updateBedsTable();
         });
 
         function registerParent() {
             const id = document.getElementById('user-id').value.trim().toUpperCase();
             const pass = document.getElementById('password').value;
-            if (!id || !pass) return alert("Fill both fields");
+            if (!id || !pass) return alert("Fill both");
             db.collection("users").doc(id).get().then(s => {
-                if (s.exists) return alert("Already registered");
+                if (s.exists) return alert("Already exists");
                 db.collection("users").doc(id).set({
                     password: pass,
                     volumePerFeed: 0,
                     numFeeds: 0,
-                    provisions: []
+                    todayMl: 0,
+                    lastUpdate: ""
                 }).then(() => alert("Registered!"));
             });
         }
@@ -141,7 +143,7 @@ const firebaseConfig = {
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('hcw-section').style.display = 'block';
                 populateBedSelect();
-                updateBedsTable();   // show data immediately
+                updateBedsTable();
                 return;
             }
 
@@ -151,8 +153,7 @@ const firebaseConfig = {
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('parent-section').style.display = 'block';
                 document.getElementById('current-bed').textContent = id;
-                alert(`Welcome!\nTarget: ${doc.data().volumePerFeed||0} ml × ${doc.data().numFeeds||0} feeds`);
-                showStats();
+                loadTodayData();
             });
         }
 
@@ -163,102 +164,83 @@ const firebaseConfig = {
             document.getElementById('hcw-section').style.display = 'none';
         }
 
-        function logProvision() {
-            const vol = parseFloat(document.getElementById('volume-per-bottle').value);
-            const num = parseInt(document.getElementById('num-bottles').value);
-            if (!vol || !num) return alert("Fill both");
-            const amount = vol * num;
-            const entry = { date: new Date().toISOString(), volumePerBottle: vol, numBottles: num, amount };
+        // Parent: Save today's total (overwrites)
+        function saveTodayTotal() {
+            const ml = parseInt(document.getElementById('today-ml').value);
+            if (isNaN(ml) || ml < 0) return alert("Enter valid number");
+
+            const today = new Date().toISOString().slice(0,10);
 
             db.collection("users").doc(currentUser).update({
-                provisions: firebase.firestore.FieldValue.arrayUnion(entry)
+                todayMl: ml,
+                lastUpdate: today
             }).then(() => {
-                alert(`Success! ${vol}×${num} = ${amount} ml`);
-                document.getElementById('volume-per-bottle').value = '';
-                document.getElementById('num-bottles').value = '';
-                showStats();
-                // Real-time listener above will update HCW table automatically
+                alert(`Saved! Today's total = ${ml} ml`);
+                loadTodayData();
             });
         }
 
-        function showStats() {
+        function loadTodayData() {
             db.collection("users").doc(currentUser).get().then(doc => {
-                const u = doc.data();
-                const total = u.provisions.reduce((s,p)=>s+p.amount,0);
-                const today = new Date().toISOString().slice(0,10);
-                const todayTotal = u.provisions.filter(p=>p.date.startsWith(today)).reduce((s,p)=>s+p.amount,0);
+                const d = doc.data();
+                const target = (d.volumePerFeed || 0) * (d.numFeeds || 0);
+                const todayMl = d.todayMl || 0;
+
+                document.getElementById('today-ml').value = todayMl;
 
                 document.getElementById('stats').innerHTML = `
-                    <strong>Today's Target:</strong> ${u.volumePerFeed||0} ml × ${u.numFeeds||0} feeds<br>
-                    <strong>Today's Provided:</strong> ${todayTotal} ml<br>
-                    <strong>Total Ever:</strong> ${total} ml<br>
-                    <strong>Entries:</strong> ${u.provisions.length}
+                    <strong>Today's Target:</strong> ${d.volumePerFeed||0} ml × ${d.numFeeds||0} feeds = <strong>${target} ml</strong><br>
+                    <strong>Today's Provided:</strong> ${todayMl} ml
                 `;
-                document.getElementById('stash').textContent = `Today's Collected: ${todayTotal} ml`;
-                document.getElementById('stash').className = todayTotal >= (u.volumePerFeed * u.numFeeds) ? 'positive' : '';
+
+                document.getElementById('today-total').textContent = `Today's Total: ${todayMl} ml`;
+                document.getElementById('today-total').className = todayMl >= target ? 'positive' : '';
             });
         }
 
-        function populateBedSelect() {
-            const sel = document.getElementById('hcw-bed-select');
-            sel.innerHTML = '<option value="">-- Choose Bed --</option>';
-            db.collection("users").get().then(snap => {
-                snap.forEach(d => {
-                    let opt = document.createElement('option');
-                    opt.value = d.id;
-                    opt.textContent = d.id;
-                    sel.appendChild(opt);
-                });
-            });
-        }
-
+        // HCW: Update target
         function updateRequirement() {
             const bed = document.getElementById('hcw-bed-select').value;
             const vol = parseInt(document.getElementById('hcw-volume-per-feed').value);
             const feeds = parseInt(document.getElementById('hcw-num-feeds').value);
             if (!bed || isNaN(vol) || isNaN(feeds)) return alert("Check fields");
             db.collection("users").doc(bed).set({ volumePerFeed: vol, numFeeds: feeds }, { merge: true })
-                .then(() => alert("Updated!"));
+                .then(() => alert("Target updated!"));
         }
 
-        function deleteBed() {
-            const bed = document.getElementById('hcw-bed-select').value;
-            if (!bed || !confirm("Delete " + bed + "?")) return;
-            db.collection("users").doc(bed).delete().then(() => {
-                alert("Deleted");
-                populateBedSelect();
-                updateBedsTable();
-            });
-        }
-
-        function exportAllData() {
-            let csv = "Bed,Date,Vol/Bottle,Bottles,Total,Target\n";
-            db.collection("users").get().then(snap => {
-                snap.forEach(d => {
-                    const u = d.data();
-                    u.provisions.forEach(p => {
-                        csv += `${d.id},${p.date},${p.volumePerBottle},${p.numBottles},${p.amount},${u.volumePerFeed}×${u.numFeeds}\n`;
-                    });
-                });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-                a.download = 'EBM_Data.csv';
-                a.click();
-            });
-        }
-
+        // HCW: Table — shows only TODAY
         function updateBedsTable() {
             const tbody = document.querySelector('#beds-table tbody');
             tbody.innerHTML = '';
             const today = new Date().toISOString().slice(0,10);
+
             db.collection("users").get().then(snap => {
                 snap.forEach(doc => {
-                    const u = doc.data();
-                    const total = u.provisions.reduce((s,p)=>s+p.amount,0);
-                    todayTotal = u.provisions.filter(p=>p.date.startsWith(today)).reduce((s,p)=>s+p.amount,0);
+                    const d = doc.data();
+                    const target = (d.volumePerFeed || 0) * (d.numFeeds || 0);
+                    const provided = (d.lastUpdate === today) ? (d.todayMl || 0) : 0;
+
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td>${doc.id}</td><td>${u.volumePerFeed||0}×${u.numFeeds||0}</td><td>${total}</td><td>${todayTotal}</td>`;
+                    row.innerHTML = `
+                        <td><strong>${doc.id}</strong></td>
+                        <td>${target} ml</td>
+                        <td>${provided} ml</td>
+                        <td>${provided >= target ? 'Complete' : 'Pending'}</td>
+                    `;
+                    if (provided >= target) row.style.background = '#e8f5e9';
                     tbody.appendChild(row);
+                });
+            });
+        }
+
+        function populateBedSelect() {
+            const sel = document.getElementById('hcw-bed-select');
+            sel.innerHTML = '<option value="">-- Select --</option>';
+            db.collection("users").get().then(s => {
+                s.forEach(d => {
+                    let opt = document.createElement('option');
+                    opt.value = d.id; opt.textContent = d.id;
+                    sel.appendChild(opt);
                 });
             });
         }
