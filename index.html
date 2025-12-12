@@ -32,6 +32,7 @@
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background: #f0f0f0; }
         footer { text-align: center; margin-top: 40px; font-size: 12px; color: #777; }
+        .instructions { font-size: 14px; color: #555; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -40,14 +41,19 @@
     <!-- Login Section -->
     <div id="login-section" class="section">
         <h2>Login</h2>
-        <label>ID (e.g., Bed 1 or HCW):</label>
-        <input type="text" id="user-id" placeholder="e.g., Bed 1 or HCW">
+        <label>ID (e.g., CTM01):</label>
+        <input type="text" id="user-id" placeholder="e.g., CTM01">
 
         <label>Password:</label>
         <input type="password" id="password" placeholder="Enter password">
         
         <button onclick="login()">Login</button>
         <button onclick="registerParent()" style="background: #FFC107; margin-top: 10px;">Register as Parent/Bed</button>
+        <div class="instructions">
+            <p><strong>Registration Instructions:</strong></p>
+            <p>Username: Use the initial of your baby's name followed by the bed number. E.g., CTM01 for Baby of Chan Tai Man bed number 1, CTM101 for Baby of Chan Tai Man Twin 1 bed number 101.</p>
+            <p>Password: No restrictions—choose something easy to remember.</p>
+        </div>
     </div>
 
     <!-- Parent Section -->
@@ -55,9 +61,13 @@
         <h2>Welcome, <span id="current-bed"></span></h2>
         
         <div class="section">
-            <h2>Log Today's EBM Provided (ml)</h2>
-            <label>Volume Provided Today (ml):</label>
-            <input type="number" id="amount" min="0" step="1" placeholder="e.g., 500">
+            <h2>Log Today's EBM Provided</h2>
+            <label>Volume per Bottle (ml):</label>
+            <input type="number" id="volume-per-bottle" min="0" step="1" placeholder="e.g., 50">
+
+            <label>Number of Bottles:</label>
+            <input type="number" id="num-bottles" min="1" step="1" placeholder="e.g., 3">
+            
             <button onclick="logProvision()">Submit Provision</button>
         </div>
 
@@ -75,19 +85,24 @@
         <label>Select Bed:</label>
         <select id="hcw-bed-select"></select>
         
-        <label>Update Daily Required Volume (ml):</label>
-        <input type="number" id="hcw-requirement" min="0" step="1" placeholder="e.g., 600">
+        <label>Update Daily Requirement: Volume per Feed (ml):</label>
+        <input type="number" id="hcw-volume-per-feed" min="0" step="1" placeholder="e.g., 10">
+
+        <label>Number of Feeds per Day:</label>
+        <input type="number" id="hcw-num-feeds" min="1" step="1" placeholder="e.g., 8">
+        
         <button onclick="updateRequirement()">Update Requirement</button>
         
         <button class="delete" onclick="deleteBed()">Delete Selected Bed</button>
         <button class="export" onclick="exportAllData()">Export All Data (CSV)</button>
+        <button class="refresh" onclick="refreshHcwPage()">Refresh Page</button>
         
         <h3>All Beds Overview</h3>
         <table id="beds-table">
             <thead>
                 <tr>
                     <th>Bed ID</th>
-                    <th>Daily Required (ml)</th>
+                    <th>Daily Requirement</th>
                     <th>Total Provided (ml)</th>
                     <th>Today's Provided (ml)</th>
                 </tr>
@@ -108,16 +123,10 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyB223cqRnq49791LU9P7SU9TLJmYFkegJ4",
-  authDomain: "nicu-ebm-app.firebaseapp.com",
-  projectId: "nicu-ebm-app",
-  storageBucket: "nicu-ebm-app.firebasestorage.app",
-  messagingSenderId: "191753868886",
-  appId: "1:191753868886:web:972dfce99ff2c2edbd0df7"
-}
-
+        // Replace with your Firebase config
+        const firebaseConfig = {
+            // Your config here, e.g., apiKey: "YOUR_API_KEY", etc.
+        };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
@@ -135,7 +144,8 @@ const firebaseConfig = {
                 if (doc.exists) return alert('Bed ID already exists.');
                 db.collection('users').doc(id).set({
                     password: pass,
-                    requirement: 0,
+                    volumePerFeed: 0,
+                    numFeeds: 0,
                     provisions: []
                 }).then(() => {
                     alert('Registered! Now login.');
@@ -167,8 +177,9 @@ const firebaseConfig = {
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('parent-section').style.display = 'block';
                 document.getElementById('current-bed').textContent = id;
-                const req = doc.data().requirement || 0;
-                alert(`Welcome! Today's required milk volume for your baby: ${req} ml`);
+                const volumePerFeed = doc.data().volumePerFeed || 0;
+                const numFeeds = doc.data().numFeeds || 0;
+                alert(`Welcome! Today's required feeding: ${volumePerFeed} ml for ${numFeeds} feeds per day.`);
                 showStats();
             });
         }
@@ -198,18 +209,24 @@ const firebaseConfig = {
         function updateRequirement() {
             const bed = document.getElementById('hcw-bed-select').value;
             if (!bed) return alert('Select a bed.');
-            const req = parseInt(document.getElementById('hcw-requirement').value);
-            if (isNaN(req) || req < 0) return alert('Enter valid requirement.');
-            db.collection('users').doc(bed).update({ requirement: req }).then(() => {
-                alert(`Updated requirement for ${bed} to ${req} ml`);
-                document.getElementById('hcw-requirement').value = '';
+            const volumePerFeed = parseInt(document.getElementById('hcw-volume-per-feed').value);
+            const numFeeds = parseInt(document.getElementById('hcw-num-feeds').value);
+            if (isNaN(volumePerFeed) || volumePerFeed < 0 || isNaN(numFeeds) || numFeeds < 1) return alert('Enter valid volume and number of feeds.');
+            db.collection('users').doc(bed).update({
+                volumePerFeed: volumePerFeed,
+                numFeeds: numFeeds
+            }).then(() => {
+                alert(`Updated requirement for ${bed} to ${volumePerFeed} ml for ${numFeeds} feeds.`);
+                document.getElementById('hcw-volume-per-feed').value = '';
+                document.getElementById('hcw-num-feeds').value = '';
                 updateBedsTable();
             }).catch(err => {
-                if (err.code === 'NOT_FOUND') {
+                if (err.code === 'not-found') {
                     if (!confirm(`Bed ${bed} does not exist. Create new? (Password: '1234')`)) return;
                     db.collection('users').doc(bed).set({
                         password: '1234',
-                        requirement: req,
+                        volumePerFeed: volumePerFeed,
+                        numFeeds: numFeeds,
                         provisions: []
                     }).then(() => {
                         alert(`Created and updated ${bed}.`);
@@ -235,12 +252,12 @@ const firebaseConfig = {
 
         function exportAllData() {
             db.collection('users').get().then(snapshot => {
-                let csv = 'Bed ID,Date,Amount Provided (ml),Daily Requirement (ml)\n';
+                let csv = 'Bed ID,Date,Volume per Bottle (ml),Number of Bottles,Total Amount (ml),Daily Requirement\n';
                 let hasData = false;
                 snapshot.forEach(doc => {
                     const user = doc.data();
                     user.provisions.forEach(p => {
-                        csv += `${doc.id},${p.date},${p.amount},${user.requirement || 0}\n`;
+                        csv += `${doc.id},${p.date},${p.volumePerBottle},${p.numBottles},${p.amount},${user.volumePerFeed} ml x ${user.numFeeds} feeds\n`;
                         hasData = true;
                     });
                 });
@@ -255,6 +272,12 @@ const firebaseConfig = {
             });
         }
 
+        function refreshHcwPage() {
+            populateBedSelect();
+            updateBedsTable();
+            alert('Page refreshed!');
+        }
+
         function updateBedsTable() {
             const tbody = document.querySelector('#beds-table tbody');
             tbody.innerHTML = '';
@@ -266,21 +289,24 @@ const firebaseConfig = {
                     const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
                     
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td>${doc.id}</td><td>${user.requirement || 0}</td><td>${totalProvided}</td><td>${todayProvided}</td>`;
+                    row.innerHTML = `<td>${doc.id}</td><td>${user.volumePerFeed || 0} ml x ${user.numFeeds || 0} feeds</td><td>${totalProvided}</td><td>${todayProvided}</td>`;
                     tbody.appendChild(row);
                 });
             });
         }
 
         function logProvision() {
-            const amount = parseFloat(document.getElementById('amount').value);
-            if (isNaN(amount) || amount <= 0) return alert('Enter a valid amount.');
+            const volumePerBottle = parseFloat(document.getElementById('volume-per-bottle').value);
+            const numBottles = parseInt(document.getElementById('num-bottles').value);
+            if (isNaN(volumePerBottle) || volumePerBottle <= 0 || isNaN(numBottles) || numBottles < 1) return alert('Enter valid volume per bottle and number of bottles.');
+            const amount = volumePerBottle * numBottles;
             const date = new Date().toISOString();
             db.collection('users').doc(currentUser).update({
-                provisions: firebase.firestore.FieldValue.arrayUnion({ date, amount })
+                provisions: firebase.firestore.FieldValue.arrayUnion({ date, volumePerBottle, numBottles, amount })
             }).then(() => {
-                alert(`Submitted ${amount} ml for today!`);
-                document.getElementById('amount').value = '';
+                alert(`Submitted ${volumePerBottle} ml per bottle x ${numBottles} bottles = ${amount} ml total!`);
+                document.getElementById('volume-per-bottle').value = '';
+                document.getElementById('num-bottles').value = '';
                 showStats();
             });
         }
@@ -291,21 +317,20 @@ const firebaseConfig = {
                 const totalProvided = user.provisions.reduce((s, p) => s + p.amount, 0).toFixed(0);
                 const today = new Date().toISOString().slice(0, 10);
                 const todayProvided = user.provisions.filter(p => p.date.startsWith(today)).reduce((s, p) => s + p.amount, 0);
-                const req = user.requirement || 0;
+                const volumePerFeed = user.volumePerFeed || 0;
+                const numFeeds = user.numFeeds || 0;
 
                 document.getElementById('stats').innerHTML = `
-                    <strong>Today's Required:</strong> ${req} ml<br>
+                    <strong>Today's Required:</strong> ${volumePerFeed} ml x ${numFeeds} feeds<br>
                     <strong>Today's Provided:</strong> ${todayProvided} ml<br>
                     <strong>Total Provided (All Time):</strong> ${totalProvided} ml<br>
                     <strong>Entries:</strong> ${user.provisions.length}
                 `;
 
                 document.getElementById('stash').textContent = `Today's Collected: ${todayProvided} ml`;
-                document.getElementById('stash').className = todayProvided >= req ? 'positive' : '';
+                document.getElementById('stash').className = todayProvided >= (volumePerFeed * numFeeds) ? 'positive' : '';
             });
         }
     </script>
 </body>
 </html>
-
-
