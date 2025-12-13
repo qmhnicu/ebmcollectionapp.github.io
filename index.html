@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EBM Collection App</title>
+    <title>Expressed Breast Milk (EBM) Collection App</title>
     <!-- Mother holding newborn baby icon (no bottle or pacifier) -->
     <link rel="icon" href="https://thumbs.dreamstime.com/b/mother-holding-newborn-baby-heartwarming-illustration-tenderly-her-peacefully-sleeping-wrapped-blue-blanket-406661905.jpg">
     <!-- Google Translate Script -->
@@ -41,13 +41,14 @@
         .celebration{font-size:24px;text-align:center;margin:20px 0;color:#d81b60}
         #google_translate_element { text-align: center; margin: 15px 0; }
         .goog-te-gadget-simple { background-color: #f0f0f0 !important; border: 1px solid #ccc !important; padding: 8px !important; font-size: 14px !important; border-radius: 6px !important; }
+        .timestamp{font-size:13px;color:#666;text-align:center;margin:10px 0}
     </style>
 </head>
 <body>
     <!-- Google Translate Widget -->
     <div id="google_translate_element"></div>
 
-    <h1>EBM Collection App</h1>
+    <h1>Expressed Breast Milk (EBM) Collection App</h1>
 
     <!-- Login -->
     <div id="login-section" class="section">
@@ -57,12 +58,12 @@
         <label>Password:</label>
         <input type="password" id="password">
         <button onclick="login()">Login</button>
-        <button onclick="registerParent()" style="background:#FFC107">Register New Bed</button>
 
         <div class="instructions">
             <strong>ID = Baby initials + bed number</strong><br>
             Examples: CTM01, LKM101, ABC08<br>
-            <small>Case doesn't matter — bed23 and BED23 are the same</small>
+            <small>Case doesn't matter — bed23 and BED23 are the same</small><br>
+            <small>New registration can only be done by healthcare staff.</small>
         </div>
     </div>
 
@@ -71,7 +72,7 @@
         <h2>Welcome, <span id="current-bed"></span></h2>
 
         <div class="section">
-            <h2>Today's EBM Provided</h2>
+            <h2>Today's Expressed Breast Milk (EBM) Provided</h2>
             <label>Volume per Bottle (ml):</label>
             <input type="number" id="volume-per-bottle" min="1" step="1" placeholder="60">
             <label>Number of Bottles:</label>
@@ -86,6 +87,7 @@
         <button class="logout" onclick="logout()">Logout</button>
 
         <div id="stats"></div>
+        <div id="last-updated" class="timestamp"></div>
         <div id="today-total">Today's Total: 0 ml</div>
         <div id="celebration" class="celebration" style="display:none"></div>
     </div>
@@ -93,6 +95,16 @@
     <!-- HCW View -->
     <div id="hcw-section" class="section" style="display:none">
         <h2>Healthcare Worker Panel</h2>
+
+        <!-- Registration in Admin Panel -->
+        <div class="section">
+            <h3>Register New Bed</h3>
+            <label>New Bed ID (e.g., CTM01):</label>
+            <input type="text" id="new-bed-id" placeholder="e.g., CTM01">
+            <label>Password:</label>
+            <input type="password" id="new-bed-password">
+            <button onclick="registerNewBed()" style="background:#FFC107">Register Bed</button>
+        </div>
 
         <label>Select Bed:</label>
         <select id="hcw-bed-select"></select>
@@ -117,6 +129,7 @@
                     <th>Mother's Bottles</th>
                     <th>Mother's Total</th>
                     <th>PDBM Required</th>
+                    <th>Last Updated</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -130,7 +143,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // YOUR NICU-EBM-APP FIREBASE CONFIG — PERMANENTLY INTEGRATED
         const firebaseConfig = {
             apiKey: "AIzaSyB223cqRnq49791LU9P7SU9TLJmYFkegJ4",
             authDomain: "nicu-ebm-app.firebaseapp.com",
@@ -154,14 +166,15 @@
             return id.trim().toUpperCase();
         }
 
-        function registerParent() {
-            const rawId = document.getElementById('user-id').value;
+        // NEW: Register from admin panel only
+        function registerNewBed() {
+            const rawId = document.getElementById('new-bed-id').value;
             const id = normalizeId(rawId);
-            const pass = document.getElementById('password').value;
+            const pass = document.getElementById('new-bed-password').value;
             if (!rawId || !pass) return alert("Fill both fields");
 
             db.collection("users").doc(id).get().then(s => {
-                if (s.exists) return alert("This bed ID already exists (case-insensitive)");
+                if (s.exists) return alert("This bed ID already exists");
                 db.collection("users").doc(id).set({
                     password: pass,
                     volumePerFeed: 0,
@@ -170,11 +183,13 @@
                     todayNumBottles: 0,
                     todayMl: 0,
                     lastUpdate: "",
+                    lastUpdateTimestamp: null,
                     displayId: rawId
                 }).then(() => {
-                    alert("Registered successfully!");
-                    document.getElementById('user-id').value = '';
-                    document.getElementById('password').value = '';
+                    alert("New bed registered successfully!");
+                    document.getElementById('new-bed-id').value = '';
+                    document.getElementById('new-bed-password').value = '';
+                    populateBedSelect();
                 });
             });
         }
@@ -217,12 +232,14 @@
 
             const ml = vol * num;
             const today = new Date().toISOString().slice(0,10);
+            const now = new Date();
 
             db.collection("users").doc(currentUser).update({
                 todayVolumePerBottle: vol,
                 todayNumBottles: num,
                 todayMl: ml,
-                lastUpdate: today
+                lastUpdate: today,
+                lastUpdateTimestamp: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
                 document.getElementById('celebration').innerHTML = `
                     Well done! You have done a great job!<br>
@@ -250,6 +267,17 @@
 
                 document.getElementById('today-total').textContent = `Today's Total: ${todayMl} ml`;
                 document.getElementById('today-total').className = todayMl >= target ? 'positive' : '';
+
+                // Last updated timestamp
+                if (d.lastUpdateTimestamp) {
+                    d.lastUpdateTimestamp.toDate().then(ts => {
+                        const dateStr = ts.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+                        const timeStr = ts.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                        document.getElementById('last-updated').textContent = `Last updated on ${dateStr} at ${timeStr}`;
+                    });
+                } else {
+                    document.getElementById('last-updated').textContent = "";
+                }
             });
         }
 
@@ -288,6 +316,14 @@
                     const total = d.lastUpdate === today ? (d.todayMl || 0) : 0;
                     const pdbm = Math.max(0, target - total);
 
+                    let lastUpdated = "";
+                    if (d.lastUpdateTimestamp) {
+                        const ts = d.lastUpdateTimestamp.toDate();
+                        const dateStr = ts.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+                        const timeStr = ts.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                        lastUpdated = `${dateStr} ${timeStr}`;
+                    }
+
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td><strong>${display}</strong></td>
@@ -295,6 +331,7 @@
                         <td>${vol} ml × ${bottles} bottles</td>
                         <td><strong>${total} ml</strong></td>
                         <td><strong>${pdbm} ml</strong></td>
+                        <td>${lastUpdated || "-"}</td>
                     `;
                     if (pdbm === 0) row.style.background = '#e8f5e9';
                     tbody.appendChild(row);
@@ -316,7 +353,7 @@
         }
 
         function exportToExcel() {
-            let csv = "Bed ID,Target (ml),Target Bottles,Mother Volume per Bottle,Mother Bottles,Mother Total,PDBM Required\n";
+            let csv = "Bed ID,Target (ml),Target Bottles,Mother Volume per Bottle,Mother Bottles,Mother Total,PDBM Required,Last Updated\n";
             const today = new Date().toISOString().slice(0,10);
 
             db.collection("users").get().then(snap => {
@@ -329,7 +366,13 @@
                     const total = d.lastUpdate === today ? (d.todayMl || 0) : 0;
                     const pdbm = Math.max(0, target - total);
 
-                    csv += `${display},${target},${d.numFeeds||0},${vol},${bottles},${total},${pdbm}\n`;
+                    let lastUpdated = "";
+                    if (d.lastUpdateTimestamp) {
+                        const ts = d.lastUpdateTimestamp.toDate();
+                        lastUpdated = ts.toLocaleString();
+                    }
+
+                    csv += `${display},${target},${d.numFeeds||0},${vol},${bottles},${total},${pdbm},"${lastUpdated}"\n`;
                 });
 
                 const blob = new Blob([csv], {type: 'text/csv'});
