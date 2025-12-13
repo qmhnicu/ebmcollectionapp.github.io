@@ -150,6 +150,7 @@
                             <th>Target (ml × bottles)</th>
                             <th>EBM (ml × bottles)</th>
                             <th>PDBM Needed (ml)</th>
+                            <th>PDBM Bottles (per baby)</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -412,7 +413,7 @@
             });
         }
 
-        // PDBM Aliquot Calculator - Updated packing logic
+        // PDBM Aliquot Calculator - Updated with shared packing and zero waste
         function calculatePDBM() {
             const resultsDiv = document.getElementById('aliquot-results');
             const tableBody = document.getElementById('aliquot-table').querySelector('tbody');
@@ -431,16 +432,23 @@
                     const ebmVol = d.lastUpdate === today ? (d.todayVolumePerBottle || 0) : 0;
                     const ebmBottles = d.lastUpdate === today ? (d.todayNumBottles || 0) : 0;
                     const ebmMl = d.lastUpdate === today ? (d.todayMl || 0) : 0;
-                    const pdbmMl = Math.max(0, targetMl - ebmMl);
 
-                    // Per-feed PDBM (uniform)
-                    const pdbmPerFeed = pdbmMl / targetBottles;
-                    let perBabyBottles = "0 x 125ml + 0 x 50ml";
+                    // EBM covers ebm_bottles full feeds (no split, waste excess in EBM bottle)
+                    const coveredFeeds = Math.min(ebmBottles, targetBottles);
+                    const pdbmFeeds = targetBottles - coveredFeeds;
+                    const pdbmMl = pdbmFeeds * targetVol;
+
+                    // Add PDBM per-feed aliquots for shared packing
+                    for (let i = 0; i < pdbmFeeds; i++) {
+                        all_feeds.push(targetVol);
+                    }
+
+                    let perBabyBottles = "None";
                     if (pdbmMl > 0) {
                         let num_125 = Math.floor(pdbmMl / 125);
                         let remaining = pdbmMl % 125;
                         let num_50 = Math.ceil(remaining / 50);
-                        perBabyBottles = `${num_125} x 125ml + ${num_50} x 50ml`;
+                        perBabyBottles = `${num_125} × 125ml + ${num_50} × 50ml`;
                     }
 
                     const row = tableBody.insertRow();
@@ -449,19 +457,14 @@
                         <td>${targetVol} ml × ${targetBottles} bottles</td>
                         <td>${ebmVol} ml × ${ebmBottles} bottles</td>
                         <td>${pdbmMl} ml</td>
-                        <td>${pdbmPerFeed.toFixed(1)} ml x ${targetBottles} bottles</td>
+                        <td>${perBabyBottles}</td>
                     `;
-
-                    // Add per-feed aliquots for shared packing
-                    for (let i = 0; i < targetBottles; i++) {
-                        if (pdbmPerFeed > 0) all_feeds.push(pdbmPerFeed);
-                    }
 
                     total_pdbm += pdbmMl;
                 });
 
-                // Shared packing: First-fit decreasing
-                all_feeds.sort((a, b) => b - a);  // Descending
+                // Shared packing: First-fit decreasing for minimum bottles
+                all_feeds.sort((a, b) => b - a);  // Descending for better packing
                 let bins = [];
                 for (let feed of all_feeds) {
                     let placed = false;
