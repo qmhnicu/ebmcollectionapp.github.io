@@ -6,6 +6,18 @@
     <title>EBM Collection App</title>
     <!-- Mother holding newborn baby icon (no bottle or pacifier) -->
     <link rel="icon" href="https://thumbs.dreamstime.com/b/mother-holding-newborn-baby-heartwarming-illustration-tenderly-her-peacefully-sleeping-wrapped-blue-blanket-406661905.jpg">
+    <!-- Google Translate Script -->
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'en,zh-CN,zh-TW,ms,ta',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
     <style>
         body{font-family:Arial,sans-serif;max-width:500px;margin:20px auto;padding:20px;background:#f5f7fa;color:#333}
         h1,h2{text-align:center;color:#2c3e50}
@@ -27,9 +39,14 @@
         th{background:#e3f2fd;color:#1565c0}
         .live{font-size:12px;color:#4CAF50;text-align:center;margin:10px 0}
         .celebration{font-size:24px;text-align:center;margin:20px 0;color:#d81b60}
+        #google_translate_element { text-align: center; margin: 15px 0; }
+        .goog-te-gadget-simple { background-color: #f0f0f0 !important; border: 1px solid #ccc !important; padding: 8px !important; font-size: 14px !important; border-radius: 6px !important; }
     </style>
 </head>
 <body>
+    <!-- Google Translate Widget -->
+    <div id="google_translate_element"></div>
+
     <h1>EBM Collection App</h1>
 
     <!-- Login -->
@@ -113,15 +130,15 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyB223cqRnq49791LU9P7SU9TLJmYFkegJ4",
-  authDomain: "nicu-ebm-app.firebaseapp.com",
-  projectId: "nicu-ebm-app",
-  storageBucket: "nicu-ebm-app.firebasestorage.app",
-  messagingSenderId: "191753868886",
-  appId: "1:191753868886:web:972dfce99ff2c2edbd0df7"
-};
+        // YOUR NICU-EBM-APP FIREBASE CONFIG — PERMANENTLY INTEGRATED
+        const firebaseConfig = {
+            apiKey: "AIzaSyB223cqRnq49791LU9P7SU9TLJmYFkegJ4",
+            authDomain: "nicu-ebm-app.firebaseapp.com",
+            projectId: "nicu-ebm-app",
+            storageBucket: "nicu-ebm-app.firebasestorage.app",
+            messagingSenderId: "191753868886",
+            appId: "1:191753868886:web:972dfce99ff2c2edbd0df7"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
