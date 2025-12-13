@@ -412,12 +412,13 @@
             });
         }
 
-        // PDBM Aliquot Calculator - Fixed syntax error
+        // PDBM Aliquot Calculator - Fixed variable scope
         function calculatePDBM() {
             const resultsDiv = document.getElementById('aliquot-results');
             const tableBody = document.getElementById('aliquot-table').querySelector('tbody');
             tableBody.innerHTML = '';
             let total_pdbm = 0;
+            const today = new Date().toISOString().slice(0,10);  // Fixed: defined 'today' here
 
             db.collection("users").get().then(snap => {
                 snap.forEach(doc => {
@@ -442,10 +443,11 @@
                     total_pdbm += pdbmMl;
                 });
 
+                // Bottle calculation (125ml limit, prefer larger bottles)
                 let num_125 = Math.floor(total_pdbm / 125);
                 let remaining = total_pdbm % 125;
                 let num_50 = Math.ceil(remaining / 50);
-                let waste = (num_50 * 50) + (num_125 * 125) - total_pdbm;
+                let waste = (num_125 * 125 + num_50 * 50) - total_pdbm;
 
                 document.getElementById('overall-summary').innerHTML = `
                     <strong>Total PDBM Required:</strong> ${total_pdbm} ml<br>
