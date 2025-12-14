@@ -156,7 +156,7 @@
                     </thead>
                     <tbody></tbody>
                 </table>
-                <h3>Overall Summary</h3>
+                <h3>Overall Summary (Shared Packing)</h3>
                 <div id="overall-summary"></div>
             </div>
         </div>
@@ -369,7 +369,7 @@
                     tbody.appendChild(row);
                 });
 
-                // Cumulative PDBM row
+                // Cumulative row
                 const cumRow = document.createElement('tr');
                 cumRow.className = 'total-row';
                 cumRow.innerHTML = `
@@ -425,11 +425,12 @@
             });
         }
 
-        // PDBM Aliquot Calculator - Unified calculation
+        // PDBM Aliquot Calculator - Consistent shared packing
         function calculatePDBM() {
             const resultsDiv = document.getElementById('aliquot-results');
             const tableBody = document.getElementById('aliquot-table').querySelector('tbody');
             tableBody.innerHTML = '';
+            let all_pdbm_feeds = [];
             let total_pdbm = 0;
             const today = new Date().toISOString().slice(0,10);
 
@@ -444,6 +445,12 @@
                     const ebmBottles = d.lastUpdate === today ? (d.todayNumBottles || 0) : 0;
                     const ebmMl = d.lastUpdate === today ? (d.todayMl || 0) : 0;
                     const pdbmMl = Math.max(0, targetMl - ebmMl);
+
+                    // Per-feed PDBM for shared packing
+                    const pdbmPerFeed = pdbmMl / targetBottles;
+                    for (let i = 0; i < targetBottles; i++) {
+                        all_pdbm_feeds.push(pdbmPerFeed);
+                    }
 
                     let perBabyBottles = "None";
                     if (pdbmMl > 0) {
@@ -465,26 +472,35 @@
                     total_pdbm += pdbmMl;
                 });
 
-                // Unified overall calculation
-                let num_125 = Math.floor(total_pdbm / 125);
-                let remaining = total_pdbm % 125;
-                let num_50 = Math.ceil(remaining / 50);
-                let waste = (num_125 * 125 + num_50 * 50) - total_pdbm;
+                // Shared packing across all babies
+                all_pdbm_feeds.sort((a, b) => b - a);
+                let bins = [];
+                for (let feed of all_pdbm_feeds) {
+                    if (feed === 0) continue;
+                    let placed = false;
+                    for (let bin of bins) {
+                        if (bin.remaining >= feed) {
+                            bin.remaining -= feed;
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) {
+                        const cap = feed > 62.5 ? 125 : 50;  // Prefer 125ml if feed > half of 125
+                        bins.push({ cap, remaining: cap - feed });
+                    }
+                }
+
+                const num_125 = bins.filter(b => b.cap === 125).length;
+                const num_50 = bins.filter(b => b.cap === 50).length;
+                const waste = bins.reduce((sum, b) => sum + b.remaining, 0);
 
                 document.getElementById('overall-summary').innerHTML = `
                     <strong>Total PDBM Required:</strong> ${total_pdbm} ml<br>
                     <strong>125ml Bottles Needed:</strong> ${num_125}<br>
                     <strong>50ml Bottles Needed:</strong> ${num_50}<br>
-                    <strong>Estimated Waste:</strong> ${waste} ml<br>
+                    <strong>Estimated Waste:</strong> ${waste.toFixed(1)} ml<br>
                     <small>Note: Bottles shared across babies. Waste minimized.</small>
-                `;
-
-                // Add cumulative row to aliquot table
-                const cumRow = tableBody.insertRow();
-                cumRow.className = 'total-row';
-                cumRow.innerHTML = `
-                    <td colspan="3"><strong>Total PDBM Required</strong></td>
-                    <td colspan="2"><strong>${total_pdbm} ml</strong></td>
                 `;
 
                 resultsDiv.style.display = 'block';
