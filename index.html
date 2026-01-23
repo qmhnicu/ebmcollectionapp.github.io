@@ -45,9 +45,10 @@
         .timestamp{font-size:13px;color:#666;text-align:center;margin:10px 0}
         .edit-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .total-row{background:#fff3e0 !important;font-weight:bold}
+        .scroll-smooth{scroll-behavior:smooth}
     </style>
 </head>
-<body>
+<body class="scroll-smooth">
     <!-- Google Translate Widget -->
     <div id="google_translate_element"></div>
 
@@ -405,6 +406,9 @@
                 document.getElementById('edit-num-feeds').value = d.numFeeds || '';
                 document.getElementById('edit-form').style.display = 'block';
                 document.getElementById('edit-form').dataset.bedId = bedId;
+
+                // Scroll to edit form
+                document.getElementById('edit-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         }
 
