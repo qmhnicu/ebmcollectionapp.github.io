@@ -30,6 +30,7 @@
         button.export{background:#1976D2}
         button.logout{background:#607D8B}
         button.edit{background:#FFC107;margin-left:10px;font-size:14px;padding:6px 10px}
+        button.reply{background:#2196F3;margin-top:10px}
         .section{background:white;padding:20px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);margin-top:20px}
         #stats{margin-top:20px;padding:15px;background:#e8f5e9;border-radius:8px;font-size:18px}
         #today-total{font-size:28px;font-weight:bold;text-align:center;margin:20px 0;color:#2e7d32}
@@ -47,6 +48,10 @@
         .total-row{background:#fff3e0 !important;font-weight:bold}
         .consult-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .fasting-message{font-size:18px;color:#d81b60;text-align:center;margin:20px 0;font-weight:bold}
+        .conversation-log{margin-top:10px;padding:10px;background:#f9f9f9;border-radius:6px;max-height:200px;overflow-y:auto}
+        .message-item{margin:8px 0;padding:8px;border-radius:6px}
+        .message-mother{background:#e3f2fd}
+        .message-nurse{background:#c8e6c9}
     </style>
 </head>
 <body>
@@ -106,10 +111,19 @@
         <div id="today-total">Today's Total: 0 ml</div>
         <div id="celebration" class="celebration" style="display:none"></div>
 
-        <div id="consult-form" class="consult-form">
-            <label>Please tell us how we can assist you:</label>
-            <textarea id="consult-message" rows="4" placeholder="Your message..."></textarea>
-            <button onclick="submitConsult()">Submit Request</button>
+        <!-- Consultation Form & Log -->
+        <div id="consult-section" class="section" style="margin-top:20px">
+            <h3>Lactation Support</h3>
+            <button class="consult" onclick="requestConsult()">Send Message to Lactation Team</button>
+            <div id="consult-form" class="consult-form">
+                <label>Please tell us how we can assist you:</label>
+                <textarea id="consult-message" rows="4" placeholder="Your message..."></textarea>
+                <button onclick="submitConsult()">Send</button>
+            </div>
+            <div id="conversation-log" class="conversation-log" style="display:none">
+                <h4>Conversation Log</h4>
+                <div id="log-messages"></div>
+            </div>
         </div>
     </div>
 
@@ -205,7 +219,7 @@
             if (currentUser === 'hcw') updateBedsTable();
         });
 
-        db.collection("consult_requests").where("status", "==", "pending").onSnapshot(() => {
+        db.collection("consult_requests").onSnapshot(() => {
             if (currentUser === 'hcw') loadConsultRequests();
         });
 
@@ -269,6 +283,7 @@
                 document.getElementById('parent-section').style.display = 'block';
                 document.getElementById('current-bed').textContent = doc.data().displayId || id;
                 loadTodayData();
+                loadConversationLog();
             });
         }
 
@@ -380,11 +395,36 @@
                 bedId: currentUser,
                 message: message,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                status: "pending"
+                status: "pending",
+                conversation: [{ sender: "mother", message: message, time: new Date() }]
             }).then(() => {
                 alert("Thank you for your message. Our lactation consultant will contact you shortly. 💕");
                 document.getElementById('consult-message').value = '';
                 document.getElementById('consult-form').style.display = 'none';
+                loadConversationLog();
+            });
+        }
+
+        function loadConversationLog() {
+            db.collection("consult_requests").where("bedId", "==", currentUser).orderBy("timestamp", "desc").limit(1).get().then(snap => {
+                if (snap.empty) {
+                    document.getElementById('conversation-log').style.display = 'none';
+                    return;
+                }
+                snap.forEach(doc => {
+                    const req = doc.data();
+                    const logDiv = document.getElementById('log-messages');
+                    logDiv.innerHTML = '';
+                    if (req.conversation) {
+                        req.conversation.forEach(msg => {
+                            const item = document.createElement('div');
+                            item.className = 'message-item ' + (msg.sender === 'mother' ? 'message-mother' : 'message-nurse');
+                            item.innerHTML = `<strong>${msg.sender === 'mother' ? 'You' : 'Nurse'} (${new Date(msg.time).toLocaleString()}):</strong> ${msg.message}`;
+                            logDiv.appendChild(item);
+                        });
+                    }
+                    document.getElementById('conversation-log').style.display = 'block';
+                });
             });
         }
 
@@ -564,27 +604,63 @@
         function loadConsultRequests() {
             const div = document.getElementById('consult-requests');
             div.innerHTML = '<p>Loading requests...</p>';
-            db.collection("consult_requests").where("status", "==", "pending").get().then(snap => {
+            db.collection("consult_requests").orderBy("timestamp", "desc").get().then(snap => {
                 div.innerHTML = '';
                 if (snap.empty) {
-                    div.innerHTML = "<p>No pending requests.</p>";
+                    div.innerHTML = "<p>No consultation requests.</p>";
                     return;
                 }
                 snap.forEach(doc => {
                     const req = doc.data();
                     const timestamp = req.timestamp ? req.timestamp.toDate().toLocaleString() : "N/A";
+                    let logHtml = '';
+                    if (req.conversation) {
+                        req.conversation.forEach(msg => {
+                            const msgTime = new Date(msg.time).toLocaleString();
+                            logHtml += `<div class="message-item ${msg.sender === 'mother' ? 'message-mother' : 'message-nurse'}">
+                                <strong>${msg.sender === 'mother' ? 'Mother' : 'Nurse'} (${msgTime}):</strong> ${msg.message}
+                            </div>`;
+                        });
+                    }
+
                     div.innerHTML += `
                         <div class="request-item">
                             <strong>Bed:</strong> ${req.bedId}<br>
-                            <strong>Message:</strong> ${req.message}<br>
-                            <strong>Time:</strong> ${timestamp}<br>
-                            <button onclick="markConsultDone('${doc.id}')">Mark as Done</button>
+                            <strong>Status:</strong> ${req.status === 'pending' ? 'Pending' : 'Done'}<br>
+                            <strong>Started:</strong> ${timestamp}<br>
+                            <div class="conversation-log">${logHtml}</div>
+                            ${req.status === 'pending' ? `<textarea id="reply-${doc.id}" rows="2" placeholder="Reply to mother..."></textarea>
+                            <button class="reply" onclick="sendReply('${doc.id}')">Send Reply</button>
+                            <button onclick="markConsultDone('${doc.id}')">Mark as Done</button>` : ''}
                         </div>
                     `;
                 });
             }).catch(err => {
                 div.innerHTML = "<p>Error loading requests.</p>";
                 console.error(err);
+            });
+        }
+
+        function sendReply(requestId) {
+            const replyText = document.getElementById(`reply-${requestId}`).value.trim();
+            if (!replyText) return alert("Please enter a reply");
+
+            db.collection("consult_requests").doc(requestId).get().then(doc => {
+                const req = doc.data();
+                const newConversation = req.conversation || [];
+                newConversation.push({
+                    sender: "nurse",
+                    message: replyText,
+                    time: new Date()
+                });
+
+                db.collection("consult_requests").doc(requestId).update({
+                    conversation: newConversation,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    document.getElementById(`reply-${requestId}`).value = '';
+                    loadConsultRequests();
+                });
             });
         }
 
