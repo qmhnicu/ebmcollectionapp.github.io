@@ -46,7 +46,7 @@
         .edit-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .total-row{background:#fff3e0 !important;font-weight:bold}
         .consult-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
-        .fasting-message{font-size:18px;color:#d81b60;text-align:center;margin:20px 0}
+        .fasting-message{font-size:18px;color:#d81b60;text-align:center;margin:20px 0;font-weight:bold}
     </style>
 </head>
 <body>
@@ -359,8 +359,8 @@
                 document.getElementById('baby-info').innerHTML = babyInfo;
 
                 // Fasting message
-                if (target === 0) {
-                    document.getElementById('fasting-message').innerHTML = "Baby is currently keep fasting.";
+                if (target === 0 && d.numFeeds === 0) {
+                    document.getElementById('fasting-message').innerHTML = "Baby is currently kept fasting.";
                     document.getElementById('fasting-message').style.display = 'block';
                 } else {
                     document.getElementById('fasting-message').style.display = 'none';
