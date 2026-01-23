@@ -29,7 +29,6 @@
         button.delete{background:#d32f2f}
         button.export{background:#1976D2}
         button.logout{background:#607D8B}
-        button.consult{background:#FF9800;margin-top:10px}
         button.edit{background:#FFC107;margin-left:10px;font-size:14px;padding:6px 10px}
         .section{background:white;padding:20px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);margin-top:20px}
         #stats{margin-top:20px;padding:15px;background:#e8f5e9;border-radius:8px;font-size:18px}
@@ -44,9 +43,8 @@
         #google_translate_element { text-align: center; margin: 15px 0; }
         .goog-te-gadget-simple { background-color: #f0f0f0 !important; border: 1px solid #ccc !important; padding: 8px !important; font-size: 14px !important; border-radius: 6px !important; }
         .timestamp{font-size:13px;color:#666;text-align:center;margin:10px 0}
-        .consult-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
+        .edit-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .total-row{background:#fff3e0 !important;font-weight:bold}
-        .request-item{margin:10px 0;padding:10px;background:#fff3e0;border-radius:6px}
     </style>
 </head>
 <body>
@@ -115,6 +113,8 @@
             <input type="text" id="new-bed-id" placeholder="e.g., CTM01">
             <label>Password:</label>
             <input type="password" id="new-bed-password">
+            <label>Date of Birth:</label>
+            <input type="date" id="new-dob">
             <button onclick="registerNewBed()" style="background:#FFC107">Register Bed</button>
         </div>
 
@@ -134,7 +134,6 @@
             <button onclick="cancelEdit()" style="background:#757575">Cancel</button>
         </div>
 
-        <button onclick="updateRequirement()">Update Target</button>
         <button class="delete" onclick="deleteBed()">Delete Selected Bed</button>
         <button class="export" onclick="exportToExcel()">Export Today's Data to Excel</button>
 
@@ -201,6 +200,7 @@
             const rawId = document.getElementById('new-bed-id').value;
             const id = normalizeId(rawId);
             const pass = document.getElementById('new-bed-password').value;
+            const dob = document.getElementById('new-dob').value;
 
             if (!rawId || !pass) return alert("Fill Bed ID and password");
 
@@ -215,11 +215,13 @@
                     todayMl: 0,
                     lastUpdate: "",
                     lastUpdateTimestamp: null,
-                    displayId: rawId
+                    displayId: rawId,
+                    dob: dob ? firebase.firestore.Timestamp.fromDate(new Date(dob)) : null
                 }).then(() => {
                     alert("New bed registered successfully!");
                     document.getElementById('new-bed-id').value = '';
                     document.getElementById('new-bed-password').value = '';
+                    document.getElementById('new-dob').value = '';
                     populateBedSelect();
                 });
             });
@@ -375,6 +377,9 @@
             db.collection("users").doc(bedId).get().then(doc => {
                 const d = doc.data();
                 document.getElementById('edit-bed-id').textContent = d.displayId || bedId;
+                document.getElementById('edit-dob').value = d.dob ? d.dob.toDate().toISOString().split('T')[0] : '';
+                document.getElementById('edit-volume-per-feed').value = d.volumePerFeed || '';
+                document.getElementById('edit-num-feeds').value = d.numFeeds || '';
                 document.getElementById('edit-form').style.display = 'block';
                 document.getElementById('edit-form').dataset.bedId = bedId;
             });
@@ -382,7 +387,14 @@
 
         function saveEdit() {
             const bedId = document.getElementById('edit-form').dataset.bedId;
+            const dob = document.getElementById('edit-dob').value;
+            const vol = parseInt(document.getElementById('edit-volume-per-feed').value);
+            const feeds = parseInt(document.getElementById('edit-num-feeds').value);
+
             db.collection("users").doc(bedId).update({
+                dob: dob ? firebase.firestore.Timestamp.fromDate(new Date(dob)) : null,
+                volumePerFeed: vol || 0,
+                numFeeds: feeds || 0,
                 lastUpdateTimestamp: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
                 alert("Bed updated successfully!");
