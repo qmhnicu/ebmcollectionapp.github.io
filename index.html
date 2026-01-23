@@ -30,6 +30,7 @@
         button.export{background:#1976D2}
         button.logout{background:#607D8B}
         button.consult{background:#FF9800;margin-top:10px}
+        button.edit{background:#FFC107;margin-left:10px;font-size:14px;padding:6px 10px}
         .section{background:white;padding:20px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);margin-top:20px}
         #stats{margin-top:20px;padding:15px;background:#e8f5e9;border-radius:8px;font-size:18px}
         #today-total{font-size:28px;font-weight:bold;text-align:center;margin:20px 0;color:#2e7d32}
@@ -120,6 +121,19 @@
         <label>Select Bed:</label>
         <select id="hcw-bed-select"></select>
 
+        <!-- Edit Form -->
+        <div id="edit-form" class="edit-form">
+            <h3>Edit Bed <span id="edit-bed-id"></span></h3>
+            <label>Date of Birth:</label>
+            <input type="date" id="edit-dob">
+            <label>Volume per Bottle (ml):</label>
+            <input type="number" id="edit-volume-per-feed" min="0" step="1">
+            <label>Bottles per Day:</label>
+            <input type="number" id="edit-num-feeds" min="1" step="1">
+            <button onclick="saveEdit()">Save Changes</button>
+            <button onclick="cancelEdit()" style="background:#757575">Cancel</button>
+        </div>
+
         <button onclick="updateRequirement()">Update Target</button>
         <button class="delete" onclick="deleteBed()">Delete Selected Bed</button>
         <button class="export" onclick="exportToExcel()">Export Today's Data to Excel</button>
@@ -136,6 +150,7 @@
                     <th>Mother's Total</th>
                     <th>PDBM Required</th>
                     <th>Last Updated</th>
+                    <th>Edit</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -170,7 +185,6 @@
         let currentUser = null;
         const hcwPassword = "hcwpass";
 
-        // Real-time listeners
         db.collection("users").onSnapshot(() => {
             if (currentUser === 'hcw') updateBedsTable();
         });
@@ -357,6 +371,30 @@
             });
         }
 
+        function editBed(bedId) {
+            db.collection("users").doc(bedId).get().then(doc => {
+                const d = doc.data();
+                document.getElementById('edit-bed-id').textContent = d.displayId || bedId;
+                document.getElementById('edit-form').style.display = 'block';
+                document.getElementById('edit-form').dataset.bedId = bedId;
+            });
+        }
+
+        function saveEdit() {
+            const bedId = document.getElementById('edit-form').dataset.bedId;
+            db.collection("users").doc(bedId).update({
+                lastUpdateTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                alert("Bed updated successfully!");
+                cancelEdit();
+                updateBedsTable();
+            });
+        }
+
+        function cancelEdit() {
+            document.getElementById('edit-form').style.display = 'none';
+        }
+
         function updateBedsTable() {
             const tbody = document.querySelector('#beds-table tbody');
             tbody.innerHTML = '';
@@ -390,6 +428,7 @@
                         <td><strong>${total} ml</strong></td>
                         <td><strong>${pdbm} ml</strong></td>
                         <td>${lastUpdated || "-"}</td>
+                        <td><button class="edit" onclick="editBed('${doc.id}')">✏️</button></td>
                     `;
                     if (pdbm === 0) row.style.background = '#e8f5e9';
                     tbody.appendChild(row);
@@ -399,7 +438,7 @@
                 cumRow.className = 'total-row';
                 cumRow.innerHTML = `
                     <td colspan="4"><strong>Total PDBM Required</strong></td>
-                    <td colspan="2"><strong>${cumulative_pdbm} ml</strong></td>
+                    <td colspan="3"><strong>${cumulative_pdbm} ml</strong></td>
                 `;
                 tbody.appendChild(cumRow);
             });
