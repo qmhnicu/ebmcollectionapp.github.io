@@ -29,6 +29,7 @@
         button.delete{background:#d32f2f}
         button.export{background:#1976D2}
         button.logout{background:#607D8B}
+        button.consult{background:#FF9800;margin-top:10px}
         .section{background:white;padding:20px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);margin-top:20px}
         #stats{margin-top:20px;padding:15px;background:#e8f5e9;border-radius:8px;font-size:18px}
         #today-total{font-size:28px;font-weight:bold;text-align:center;margin:20px 0;color:#2e7d32}
@@ -42,6 +43,7 @@
         #google_translate_element { text-align: center; margin: 15px 0; }
         .goog-te-gadget-simple { background-color: #f0f0f0 !important; border: 1px solid #ccc !important; padding: 8px !important; font-size: 14px !important; border-radius: 6px !important; }
         .timestamp{font-size:13px;color:#666;text-align:center;margin:10px 0}
+        .consult-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .total-row{background:#fff3e0 !important;font-weight:bold}
     </style>
 </head>
@@ -72,6 +74,12 @@
     <div id="parent-section" class="section" style="display:none">
         <h2>Welcome, <span id="current-bed"></span></h2>
 
+        <div id="baby-info" class="section" style="margin-bottom:20px">
+            <h3>Baby Information</h3>
+            <div id="dol-display"></div>
+            <div id="target-suggestion"></div>
+        </div>
+
         <div class="section">
             <h2>Today's Expressed Breast Milk (EBM) Provided</h2>
             <label>Volume per Bottle (ml):</label>
@@ -85,12 +93,19 @@
         </div>
 
         <button class="refresh" onclick="loadTodayData()">Refresh</button>
+        <button class="consult" onclick="requestConsult()" id="consult-btn" style="display:none">Request Lactation Support</button>
         <button class="logout" onclick="logout()">Logout</button>
 
         <div id="stats"></div>
         <div id="last-updated" class="timestamp"></div>
         <div id="today-total">Today's Total: 0 ml</div>
         <div id="celebration" class="celebration" style="display:none"></div>
+
+        <div id="consult-form" class="consult-form">
+            <label>Please tell us how we can assist you:</label>
+            <textarea id="consult-message" rows="4" placeholder="Your message..."></textarea>
+            <button onclick="submitConsult()">Submit Request</button>
+        </div>
     </div>
 
     <!-- HCW View -->
@@ -104,6 +119,15 @@
             <input type="text" id="new-bed-id" placeholder="e.g., CTM01">
             <label>Password:</label>
             <input type="password" id="new-bed-password">
+            <label>Date of Birth:</label>
+            <input type="date" id="new-dob">
+            <label>Current Weight (kg, e.g., 0.875):</label>
+            <input type="number" id="new-weight" min="0" step="0.001" placeholder="0.875">
+            <label>Keep Fasting? (NPO):</label>
+            <select id="new-fasting">
+                <option value="false">No</option>
+                <option value="true">Yes (Keep Fasting)</option>
+            </select>
             <button onclick="registerNewBed()" style="background:#FFC107">Register Bed</button>
         </div>
 
@@ -114,6 +138,12 @@
         <input type="number" id="hcw-volume-per-feed" min="0" step="1">
         <label>Bottles per Day:</label>
         <input type="number" id="hcw-num-feeds" min="1" step="1">
+
+        <label>Keep Fasting? (NPO):</label>
+        <select id="hcw-fasting">
+            <option value="false">No</option>
+            <option value="true">Yes (Keep Fasting)</option>
+        </select>
 
         <button onclick="updateRequirement()">Update Target</button>
         <button class="delete" onclick="deleteBed()">Delete Selected Bed</button>
@@ -135,6 +165,12 @@
             </thead>
             <tbody></tbody>
         </table>
+
+        <!-- Consultation Requests -->
+        <div class="section" style="margin-top:30px">
+            <h3>Consultation Requests</h3>
+            <div id="consult-requests"></div>
+        </div>
 
         <button class="logout" onclick="logout()">Logout</button>
     </div>
@@ -160,7 +196,10 @@
         const hcwPassword = "hcwpass";
 
         db.collection("users").onSnapshot(() => {
-            if (currentUser === 'hcw') updateBedsTable();
+            if (currentUser === 'hcw') {
+                updateBedsTable();
+                loadConsultRequests();
+            }
         });
 
         function normalizeId(id) {
@@ -171,7 +210,11 @@
             const rawId = document.getElementById('new-bed-id').value;
             const id = normalizeId(rawId);
             const pass = document.getElementById('new-bed-password').value;
-            if (!rawId || !pass) return alert("Fill both fields");
+            const dob = document.getElementById('new-dob').value;
+            const weight = parseFloat(document.getElementById('new-weight').value);
+            const fasting = document.getElementById('new-fasting').value === 'true';
+
+            if (!rawId || !pass) return alert("Fill Bed ID and password");
 
             db.collection("users").doc(id).get().then(s => {
                 if (s.exists) return alert("This bed ID already exists");
@@ -184,11 +227,17 @@
                     todayMl: 0,
                     lastUpdate: "",
                     lastUpdateTimestamp: null,
-                    displayId: rawId
+                    displayId: rawId,
+                    dob: dob ? firebase.firestore.Timestamp.fromDate(new Date(dob)) : null,
+                    weight_kg: weight || null,
+                    fasting: fasting
                 }).then(() => {
                     alert("New bed registered successfully!");
                     document.getElementById('new-bed-id').value = '';
                     document.getElementById('new-bed-password').value = '';
+                    document.getElementById('new-dob').value = '';
+                    document.getElementById('new-weight').value = '';
+                    document.getElementById('new-fasting').value = 'false';
                     populateBedSelect();
                 });
             });
@@ -205,6 +254,7 @@
                 document.getElementById('hcw-section').style.display = 'block';
                 populateBedSelect();
                 updateBedsTable();
+                loadConsultRequests();
                 return;
             }
 
@@ -240,12 +290,26 @@
                 lastUpdate: today,
                 lastUpdateTimestamp: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
-                document.getElementById('celebration').innerHTML = `
-                    Well done! You have done a great job!<br>
-                    Your baby thanks you so much! 💕🥳
-                `;
-                document.getElementById('celebration').style.display = 'block';
-                setTimeout(() => document.getElementById('celebration').style.display = 'none', 6000);
+                db.collection("users").doc(currentUser).get().then(doc => {
+                    const d = doc.data();
+                    const target = (d.volumePerFeed || 0) * (d.numFeeds || 0);
+                    const shortfall = target - ml;
+
+                    let message = "Great effort! 💕";
+                    if (shortfall > 0) {
+                        message += ` Your baby needs ~${shortfall} ml more today.`;
+                        document.getElementById('consult-btn').style.display = 'block';
+                    } else if (shortfall < 0) {
+                        message += ` You have ~${Math.abs(shortfall)} ml surplus today — wonderful!`;
+                    } else {
+                        message += " Perfect match for today's target!";
+                    }
+
+                    document.getElementById('celebration').innerHTML = message;
+                    document.getElementById('celebration').style.display = 'block';
+                    setTimeout(() => document.getElementById('celebration').style.display = 'none', 8000);
+                });
+
                 loadTodayData();
             });
         }
@@ -275,6 +339,45 @@
                 } else {
                     document.getElementById('last-updated').textContent = "";
                 }
+
+                // Baby Info (DOL, weight, target suggestion)
+                let babyInfo = "";
+                if (d.dob) {
+                    const dob = d.dob.toDate();
+                    const today = new Date();
+                    const dol = Math.floor((today - dob) / (1000 * 60 * 60 * 24)) + 1;
+                    babyInfo += `<strong>Day of Life:</strong> ${dol}<br>`;
+                }
+                if (d.weight_kg) {
+                    babyInfo += `<strong>Current Weight:</strong> ${d.weight_kg} kg<br>`;
+                }
+                babyInfo += `<strong>Target Suggestion:</strong> Coming soon (based on DOL/weight)<br>`;
+                document.getElementById('baby-info').innerHTML = babyInfo;
+
+                // Show consultation button if shortfall
+                const shortfall = target - todayMl;
+                document.getElementById('consult-btn').style.display = shortfall > 0 ? 'block' : 'none';
+            });
+        }
+
+        function requestConsult() {
+            document.getElementById('consult-form').style.display = 'block';
+        }
+
+        function submitConsult() {
+            const message = document.getElementById('consult-message').value.trim();
+            if (!message) return alert("Please enter a message");
+
+            const today = new Date().toISOString();
+            db.collection("consult_requests").add({
+                bedId: currentUser,
+                message: message,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                status: "pending"
+            }).then(() => {
+                alert("Thank you for your message. Our lactation consultant will contact you shortly. 💕");
+                document.getElementById('consult-message').value = '';
+                document.getElementById('consult-form').style.display = 'none';
             });
         }
 
@@ -344,7 +447,6 @@
                     tbody.appendChild(row);
                 });
 
-                // Cumulative row
                 const cumRow = document.createElement('tr');
                 cumRow.className = 'total-row';
                 cumRow.innerHTML = `
@@ -397,6 +499,35 @@
                 a.href = url;
                 a.download = `EBM_Ward_${today}.csv`;
                 a.click();
+            });
+        }
+
+        function loadConsultRequests() {
+            const div = document.getElementById('consult-requests');
+            div.innerHTML = '';
+            db.collection("consult_requests").where("status", "==", "pending").get().then(snap => {
+                if (snap.empty) {
+                    div.innerHTML = "<p>No pending requests.</p>";
+                    return;
+                }
+                snap.forEach(doc => {
+                    const req = doc.data();
+                    div.innerHTML += `
+                        <div style="margin:10px 0;padding:10px;background:#fff3e0;border-radius:6px">
+                            <strong>Bed:</strong> ${req.bedId}<br>
+                            <strong>Message:</strong> ${req.message}<br>
+                            <strong>Time:</strong> ${req.timestamp.toDate().toLocaleString()}<br>
+                            <button onclick="markConsultDone('${doc.id}')">Mark as Done</button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function markConsultDone(requestId) {
+            db.collection("consult_requests").doc(requestId).update({ status: "done" }).then(() => {
+                alert("Request marked as done");
+                loadConsultRequests();
             });
         }
     </script>
