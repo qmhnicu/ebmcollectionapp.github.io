@@ -45,6 +45,7 @@
         .timestamp{font-size:13px;color:#666;text-align:center;margin:10px 0}
         .edit-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .total-row{background:#fff3e0 !important;font-weight:bold}
+        .consult-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
     </style>
 </head>
 <body>
@@ -77,6 +78,7 @@
         <div id="baby-info" class="section" style="margin-bottom:20px">
             <h3>Baby Information</h3>
             <div id="dol-display"></div>
+            <div id="weight-display"></div>
         </div>
 
         <div class="section">
@@ -307,7 +309,7 @@
                     setTimeout(() => document.getElementById('celebration').style.display = 'none', 8000);
                 });
 
-                loadTodayData();
+                // No auto-refresh — mother must click Refresh manually
             });
         }
 
@@ -337,7 +339,7 @@
                     document.getElementById('last-updated').textContent = "";
                 }
 
-                // Day of Life
+                // Baby Info (DOL + Weight)
                 let babyInfo = "";
                 if (d.dob) {
                     const dob = d.dob.toDate();
@@ -345,7 +347,12 @@
                     const dol = Math.floor((today - dob) / (1000 * 60 * 60 * 24)) + 1;
                     babyInfo += `<strong>Day of Life:</strong> ${dol}<br>`;
                 }
-                document.getElementById('dol-display').innerHTML = babyInfo;
+                if (d.weight_kg) {
+                    babyInfo += `<strong>Current Weight:</strong> ${d.weight_kg} kg<br>`;
+                } else {
+                    babyInfo += `<strong>Current Weight:</strong> -<br>`;
+                }
+                document.getElementById('baby-info').innerHTML = babyInfo;
             });
         }
 
@@ -469,7 +476,7 @@
                         dol = Math.floor((todayDate - dobDate) / (1000 * 60 * 60 * 24)) + 1;
                     }
 
-                    let weightDisplay = d.weight_kg ? d.weight_kg + " kg" : "-";
+                    let weightDisplay = d.weight_kg ? d.weight_kg.toFixed(3) + " kg" : "-";
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
