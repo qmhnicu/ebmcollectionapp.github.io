@@ -47,7 +47,6 @@
         .total-row{background:#fff3e0 !important;font-weight:bold}
         .consult-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .fasting-message{font-size:18px;color:#d81b60;text-align:center;margin:20px 0;font-weight:bold}
-        .request-item{margin:10px 0;padding:10px;background:#fff3e0;border-radius:6px}
     </style>
 </head>
 <body>
@@ -349,7 +348,7 @@
                 if (d.dob) {
                     const dob = d.dob.toDate();
                     const today = new Date();
-                    const dol = Math.floor((today - dob) / (1000 * 60 * 60 * 24)) + 1;
+                    const dol = Math.floor((today - dob) / (1000 * 60 * 60 * 24));  // Birth day = Day 0
                     babyInfo += `<strong>Day of Life:</strong> ${dol}<br>`;
                 }
                 if (d.weight_kg) {
@@ -486,7 +485,7 @@
                     if (d.dob) {
                         const dobDate = d.dob.toDate();
                         const todayDate = new Date();
-                        dol = Math.floor((todayDate - dobDate) / (1000 * 60 * 60 * 24)) + 1;
+                        dol = Math.floor((todayDate - dobDate) / (1000 * 60 * 60 * 24));  // Birth day = Day 0
                     }
 
                     let weightDisplay = d.weight_kg ? d.weight_kg.toFixed(3) + " kg" : "-";
