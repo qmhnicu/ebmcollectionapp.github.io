@@ -48,6 +48,8 @@
         .consult-form{margin-top:10px;padding:10px;background:#fff3e0;border-radius:6px;display:none}
         .fasting-message{font-size:18px;color:#d81b60;text-align:center;margin:20px 0;font-weight:bold}
         .reminder-box{margin-top:15px;padding:12px;background:#e8f5e9;border-radius:8px;font-size:15px}
+        .reminder-box ul, #celebration ul{margin:0;padding-left:20px}
+        .reminder-box li, #celebration li{margin-bottom:6px}
     </style>
 </head>
 <body>
@@ -215,20 +217,26 @@
         // Tailored reminders/info by DOL range
         const dolReminders = {
             "0-3": `
-                You have already done a good job! Keep it up!<br><br>
-                Focus on skin-to-skin contact if available (Please ask nurses for assistance)<br>
-                Frequent expression, at least 8 times per day (every 2–3 hours) even small amounts only<br>
-                At least express once at night time, since milk production hormone is very active at night time<br>
-                Hot pack / massage before expression can help milk flow become faster<br>
-                If you find your hand expression skills ineffective or need any assistance, please ask nurses
+                <ul>
+                    <li>You have already done a good job! Keep it up!</li>
+                    <li>Focus on skin-to-skin contact if available (Please ask nurses for assistance)</li>
+                    <li>Frequent expression, at least 8 times per day (every 2–3 hours) even small amounts only</li>
+                    <li>At least express once at night time, since milk production hormone is very active at night time</li>
+                    <li>Hot pack / massage before expression can help milk flow become faster</li>
+                    <li>If you find your hand expression skills ineffective or need any assistance, please ask nurses</li>
+                </ul>
             `,
             "4-7": `
-                You may start to feel your breasts are getting fuller on day 3 to 4. Please keep on expressing at least 8 times per day<br>
-                For mothers who have undergone C-section, there may be a delayed milk production progress. Please keep your expression and massage going<br>
-                The volume is estimated at around 50 to 350 ml/day, varies among different mothers
+                <ul>
+                    <li>You may start to feel your breasts are getting fuller on day 3 to 4. Please keep on expressing at least 8 times per day</li>
+                    <li>For mothers who have undergone C-section, there may be a delayed milk production progress. Please keep your expression and massage going</li>
+                    <li>The volume is estimated at around 50 to 350 ml/day, varies among different mothers</li>
+                </ul>
             `,
             "8+": `
-                Great job building your supply! Keep consistent expression (aim for 8–10 times per day).
+                <ul>
+                    <li>Great job building your supply! Keep consistent expression (aim for 8–10 times per day).</li>
+                </ul>
             `
         };
 
@@ -270,7 +278,7 @@
 
         function getReminderForDOL(dol) {
             if (dol === null || Number.isNaN(dol)) {
-                return "Please ask the healthcare team to add the baby's date of birth so we can show day-based guidance.";
+                return "<ul><li>Please ask the healthcare team to add the baby's date of birth so we can show day-based guidance.</li></ul>";
             }
             if (dol <= 3) return dolReminders["0-3"];
             if (dol <= 7) return dolReminders["4-7"];
@@ -441,14 +449,18 @@
                 // Minimal supply check & tailored message
                 let supplyMessage = "";
                 if (minimalToday === null) {
-                    supplyMessage = "We need the baby's date of birth to assess milk adequacy. Please ask the healthcare team to update it.";
+                    supplyMessage = "<ul><li>We need the baby's date of birth to assess milk adequacy. Please ask the healthcare team to update it.</li></ul>";
                 } else if (todayMl >= minimalToday) {
-                    supplyMessage = "You have already done a good job! Keep it up!<br>" +
-                        "If you are getting more milk and faster milk flow during hand expression, you may try to use breast pump for 15 minutes per side";
+                    supplyMessage = "<ul>" +
+                        "<li>You have already done a good job! Keep it up!</li>" +
+                        "<li>If you are getting more milk and faster milk flow during hand expression, you may try to use breast pump for 15 minutes per side</li>" +
+                        "</ul>";
                 } else {
-                    supplyMessage = "Remember to do hand expression at least 6 to 8 times per day, and at least once at night<br>" +
-                        "Do you feel pain or engorgement in the breast? You may seek help from lactation consultant or the breastfeeding hotline at 2255 7381<br>" +
-                        "Let us know how we may assist you via the \"Request Lactation Support\" function";
+                    supplyMessage = "<ul>" +
+                        "<li>Remember to do hand expression at least 6 to 8 times per day, and at least once at night</li>" +
+                        "<li>Do you feel pain or engorgement in the breast? You may seek help from lactation consultant or the breastfeeding hotline at 2255 7381</li>" +
+                        "<li>Let us know how we may assist you via the \"Request Lactation Support\" function</li>" +
+                        "</ul>";
                 }
 
                 document.getElementById('celebration').innerHTML = supplyMessage;
