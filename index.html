@@ -224,6 +224,7 @@
         let currentDisplayId = null;
         let motherChatUnsub = null;
         let hcwChatUnsub = null;
+        let motherChatSynced = false;
         const hcwPassword = "hcwpass";
 
         // Minimal breast milk reference (ml/day by DOL range)
@@ -355,20 +356,65 @@
                 });
         }
 
+        function subscribeUserChatMessages(bedId, container) {
+            if (!bedId || !container) return null;
+            return db.collection("users")
+                .doc(bedId)
+                .collection("chat_messages")
+                .orderBy("createdAt", "asc")
+                .onSnapshot(snapshot => {
+                    const messages = snapshot.docs.map(doc => doc.data());
+                    renderChatMessages(container, messages);
+                });
+        }
+
+        function ensureUserChatMirror(bedId) {
+            if (!bedId || motherChatSynced) return Promise.resolve();
+            const userMessagesRef = db.collection("users").doc(bedId).collection("chat_messages");
+            const consultMessagesRef = db.collection("consult_chats").doc(bedId).collection("messages");
+
+            return userMessagesRef.limit(1).get().then(snapshot => {
+                if (!snapshot.empty) {
+                    motherChatSynced = true;
+                    return;
+                }
+                return consultMessagesRef.orderBy("createdAt", "asc").get().then(chatSnap => {
+                    if (chatSnap.empty) {
+                        motherChatSynced = true;
+                        return;
+                    }
+                    const batch = db.batch();
+                    chatSnap.forEach(doc => {
+                        batch.set(userMessagesRef.doc(), doc.data());
+                    });
+                    return batch.commit().then(() => {
+                        motherChatSynced = true;
+                    });
+                });
+            }).catch(() => {
+                motherChatSynced = true;
+            });
+        }
+
         function sendChatMessage(bedId, sender, text) {
             const trimmed = (text || "").trim();
             if (!trimmed) return Promise.resolve();
 
             const chatRef = db.collection("consult_chats").doc(bedId);
+            const mirrorRef = db.collection("users").doc(bedId).collection("chat_messages");
             const now = new Date();
             const displayId = sender === "mother" ? (currentDisplayId || bedId) : bedId;
-
-            return chatRef.collection("messages").add({
+            const payload = {
                 text: trimmed,
                 sender: sender,
                 createdAt: now,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
+            };
+
+            return Promise.all([
+                chatRef.collection("messages").add(payload),
+                mirrorRef.add(payload)
+            ]).then(() => {
                 return chatRef.set({
                     displayId: displayId,
                     lastMessage: trimmed,
@@ -384,7 +430,11 @@
                 motherChatUnsub();
                 motherChatUnsub = null;
             }
-            motherChatUnsub = subscribeChatMessages(currentUser, log);
+            ensureUserChatMirror(currentUser).then(() => {
+                motherChatUnsub = subscribeUserChatMessages(currentUser, log);
+            }).catch(() => {
+                motherChatUnsub = subscribeUserChatMessages(currentUser, log);
+            });
         }
 
         function loadChatBedList() {
@@ -532,6 +582,7 @@
                 hcwChatUnsub();
                 hcwChatUnsub = null;
             }
+            motherChatSynced = false;
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('parent-section').style.display = 'none';
             document.getElementById('hcw-section').style.display = 'none';
