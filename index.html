@@ -203,25 +203,13 @@
         let currentUser = null;
         const hcwPassword = "hcwpass";
 
-        // Minimal breast milk reference (ml/day by DOL)
+        // Minimal breast milk reference (ml/day by DOL range)
         const minimalMilkByDOL = {
-            0: 0,
-            1: 0,
-            2: 0,
-            3: 0,
-            4: 50,
-            5: 50,
-            6: 50,
-            7: 50,
-            8: 300,
-            9: 300,
-            10: 300,
-            11: 400,
-            12: 400,
-            13: 400,
-            14: 400,
-            15: 500
-            // For DOL > 15, use 500 as default
+            0: 0,   // DOL 0–3
+            4: 50,  // DOL 4–7
+            8: 300, // DOL 8–10
+            11: 400, // DOL 11–14
+            15: 500 // DOL 15+
         };
 
         // Tailored reminders/info by DOL range
@@ -243,6 +231,51 @@
                 Great job building your supply! Keep consistent expression (aim for 8–10 times per day).
             `
         };
+
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+        const minimalMilkDOLs = Object.keys(minimalMilkByDOL)
+            .map(Number)
+            .filter(Number.isFinite)
+            .sort((a, b) => a - b);
+
+        function getDayOfLife(dobTimestamp) {
+            if (!dobTimestamp) return null;
+            const dobDate = dobTimestamp.toDate ? dobTimestamp.toDate() : dobTimestamp;
+            if (!dobDate || Number.isNaN(dobDate.getTime())) return null;
+
+            const today = new Date();
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const dobStart = new Date(dobDate.getFullYear(), dobDate.getMonth(), dobDate.getDate());
+            const diffDays = Math.floor((todayStart - dobStart) / MS_PER_DAY);
+
+            return diffDays < 0 ? 0 : diffDays;
+        }
+
+        function getMinimalMilkByDOL(dol) {
+            if (dol === null || dol === undefined || Number.isNaN(dol)) return null;
+            if (Object.prototype.hasOwnProperty.call(minimalMilkByDOL, dol)) {
+                return minimalMilkByDOL[dol];
+            }
+            if (minimalMilkDOLs.length === 0) return null;
+
+            const maxDOL = minimalMilkDOLs[minimalMilkDOLs.length - 1];
+            if (dol > maxDOL) return minimalMilkByDOL[maxDOL];
+
+            for (let i = minimalMilkDOLs.length - 1; i >= 0; i--) {
+                if (dol >= minimalMilkDOLs[i]) return minimalMilkByDOL[minimalMilkDOLs[i]];
+            }
+
+            return minimalMilkByDOL[minimalMilkDOLs[0]];
+        }
+
+        function getReminderForDOL(dol) {
+            if (dol === null || Number.isNaN(dol)) {
+                return "Please ask the healthcare team to add the baby's date of birth so we can show day-based guidance.";
+            }
+            if (dol <= 3) return dolReminders["0-3"];
+            if (dol <= 7) return dolReminders["4-7"];
+            return dolReminders["8+"];
+        }
 
         db.collection("users").onSnapshot(() => {
             if (currentUser === 'hcw') updateBedsTable();
@@ -345,14 +378,25 @@
             db.collection("users").doc(currentUser).get().then(doc => {
                 const d = doc.data();
                 const target = (d.volumePerFeed || 0) * (d.numFeeds || 0);
-                const todayMl = d.lastUpdate === new Date().toISOString().slice(0,10) ? (d.todayMl || 0) : 0;
+                const todayKey = new Date().toISOString().slice(0,10);
+                const hasTodayEntry = d.lastUpdate === todayKey;
+                const todayVol = hasTodayEntry ? (d.todayVolumePerBottle || 0) : 0;
+                const todayBottles = hasTodayEntry ? (d.todayNumBottles || 0) : 0;
+                const todayMl = hasTodayEntry ? (d.todayMl || (todayVol * todayBottles)) : 0;
 
-                document.getElementById('volume-per-bottle').value = d.todayVolumePerBottle || '';
-                document.getElementById('num-bottles').value = d.todayNumBottles || '';
+                document.getElementById('volume-per-bottle').value = hasTodayEntry ? (d.todayVolumePerBottle || '') : '';
+                document.getElementById('num-bottles').value = hasTodayEntry ? (d.todayNumBottles || '') : '';
+
+                const currentDOL = getDayOfLife(d.dob);
+                const minimalToday = getMinimalMilkByDOL(currentDOL);
+                const referenceLine = minimalToday === null
+                    ? `<strong>Reference:</strong> Add baby's DOB to assess adequacy.<br>`
+                    : `<strong>Reference for Day ${currentDOL}:</strong> ${minimalToday} ml/day — <strong>${todayMl >= minimalToday ? "Adequate" : "Below reference"}</strong><br>`;
 
                 document.getElementById('stats').innerHTML = `
                     <strong>Today's Target:</strong> ${d.volumePerFeed||0} ml × ${d.numFeeds||0} bottles = <strong>${target} ml</strong><br>
-                    <strong>Today's Provided:</strong> ${d.todayVolumePerBottle||0} ml × ${d.todayNumBottles||0} bottles = <strong>${todayMl} ml</strong>
+                    <strong>Today's Provided:</strong> ${todayVol} ml × ${todayBottles} bottles = <strong>${todayMl} ml</strong><br>
+                    ${referenceLine}
                 `;
 
                 document.getElementById('today-total').textContent = `Today's Total: ${todayMl} ml`;
@@ -368,31 +412,23 @@
                 }
 
                 // Baby Info (DOL + Weight)
-                let currentDOL = 0;
-                let babyInfo = "";
-                if (d.dob) {
-                    const dob = d.dob.toDate();
-                    const today = new Date();
-                    currentDOL = Math.floor((today - dob) / (1000 * 60 * 60 * 24)); // Birth day = Day 0
-                    babyInfo += `<strong>Day of Life:</strong> ${currentDOL}<br>`;
-                }
-                if (d.weight_kg) {
-                    babyInfo += `<strong>Current Weight:</strong> ${d.weight_kg.toFixed(3)} kg<br>`;
+                const dolDisplay = document.getElementById('dol-display');
+                const weightDisplay = document.getElementById('weight-display');
+
+                if (currentDOL === null) {
+                    dolDisplay.innerHTML = `<strong>Day of Life:</strong> -`;
                 } else {
-                    babyInfo += `<strong>Current Weight:</strong> -<br>`;
+                    dolDisplay.innerHTML = `<strong>Day of Life:</strong> ${currentDOL}`;
                 }
-                document.getElementById('baby-info').innerHTML = babyInfo;
+
+                if (d.weight_kg) {
+                    weightDisplay.innerHTML = `<strong>Current Weight:</strong> ${d.weight_kg.toFixed(3)} kg`;
+                } else {
+                    weightDisplay.innerHTML = `<strong>Current Weight:</strong> -`;
+                }
 
                 // Tailored DOL reminder/info
-                let reminderText = "";
-                if (currentDOL <= 3) {
-                    reminderText = dolReminders["0-3"];
-                } else if (currentDOL <= 7) {
-                    reminderText = dolReminders["4-7"];
-                } else {
-                    reminderText = dolReminders["8+"];
-                }
-                document.getElementById('dolly-reminder').innerHTML = reminderText;
+                document.getElementById('dolly-reminder').innerHTML = getReminderForDOL(currentDOL);
 
                 // Fasting message
                 if (target === 0 && d.numFeeds === 0) {
@@ -403,24 +439,16 @@
                 }
 
                 // Minimal supply check & tailored message
-                let minimalToday = 500;
-                if (currentDOL <= 3) minimalToday = 0;
-                else if (currentDOL <= 7) minimalToday = 50;
-                else if (currentDOL <= 10) minimalToday = 300;
-                else if (currentDOL <= 14) minimalToday = 400;
-
                 let supplyMessage = "";
-                if (todayMl >= minimalToday) {
-                    supplyMessage = "You have already done a good job! Keep it up!";
-                    if (todayMl > minimalToday * 1.5) {
-                        supplyMessage += "<br>If you are getting more milk and faster milk flow during hand expression, you may try to use breast pump for 15 minutes per side.";
-                    }
+                if (minimalToday === null) {
+                    supplyMessage = "We need the baby's date of birth to assess milk adequacy. Please ask the healthcare team to update it.";
+                } else if (todayMl >= minimalToday) {
+                    supplyMessage = "You have already done a good job! Keep it up!<br>" +
+                        "If you are getting more milk and faster milk flow during hand expression, you may try to use breast pump for 15 minutes per side";
                 } else {
-                    const gap = Math.round(minimalToday - todayMl);
-                    supplyMessage = `Remember to do hand expression at least 6 to 8 times per day, and at least once at night.<br>
-                    Do you feel pain or engorgement in the breast? You may seek help from lactation consultant or the breastfeeding hotline at 2255 7381.<br>
-                    Let us know how we may assist you via the "Request Lactation Support" function.<br><br>
-                    You're doing wonderfully! 💕 Today's minimal need is ${minimalToday} ml — you're close (only ~${gap} ml more).`;
+                    supplyMessage = "Remember to do hand expression at least 6 to 8 times per day, and at least once at night<br>" +
+                        "Do you feel pain or engorgement in the breast? You may seek help from lactation consultant or the breastfeeding hotline at 2255 7381<br>" +
+                        "Let us know how we may assist you via the \"Request Lactation Support\" function";
                 }
 
                 document.getElementById('celebration').innerHTML = supplyMessage;
