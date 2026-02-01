@@ -59,7 +59,7 @@
         th,td{padding:10px;border:1px solid var(--border);text-align:center}
         th{background:#FFF0ED;color:var(--text);font-weight:600}
         .live{font-size:12px;color:var(--accent);text-align:center;margin:8px 0}
-        .celebration{font-size:16px;text-align:center;margin:18px 0;color:var(--text);font-weight:600;padding:14px;background:#FFF7F5;border-radius:12px;border:1px solid var(--border)}
+        .celebration{font-size:16px;text-align:left;margin:18px 0;color:var(--text);font-weight:600;padding:14px;background:#FFF7F5;border-radius:12px;border:1px solid var(--border)}
         #google_translate_element { text-align: center; margin: 12px 0; }
         .goog-te-gadget-simple { background-color: #FFF7F5 !important; border: 1px solid var(--border) !important; padding: 8px !important; font-size: 13px !important; border-radius: 8px !important; }
         .timestamp{font-size:12px;color:var(--muted);text-align:center;margin:8px 0}
@@ -67,10 +67,10 @@
         .total-row{background:#FFF0ED !important;font-weight:bold}
         .consult-form{margin-top:10px;padding:12px;background:#FFF7F5;border-radius:10px;border:1px solid var(--border);display:none}
         .fasting-message{font-size:16px;color:#8D3B3B;text-align:center;margin:18px 0;font-weight:600}
-        .reminder-box{margin-top:12px;padding:12px;background:#FFF7F5;border-radius:12px;font-size:14px;border:1px solid var(--border)}
-        .reminder-box ul, #celebration ul{margin:0;padding-left:20px}
+        .reminder-box{margin-top:12px;padding:12px;background:#FFF7F5;border-radius:12px;font-size:14px;border:1px solid var(--border);text-align:left}
+        .reminder-box ul, #celebration ul{margin:0;padding-left:20px;list-style-position:outside}
         .reminder-box ul ul, #celebration ul ul{margin-top:6px;padding-left:18px}
-        .reminder-box li, #celebration li{margin-bottom:6px}
+        .reminder-box li, #celebration li{margin-bottom:6px;line-height:1.4}
         .chat-log{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#FFF7F5;max-height:260px;overflow-y:auto}
         .chat-message{display:flex;flex-direction:column;margin-bottom:10px}
         .chat-message.mother .chat-bubble{background:#FFF0ED;align-self:flex-start}
@@ -700,11 +700,15 @@
                 // Minimal supply check & tailored message
                 let supplyMessage = "";
                 if (minimalToday === null) {
-                    supplyMessage = "<ul><li>We need the baby's date of birth to assess milk adequacy. Please ask the healthcare team to update it.</li></ul>";
+                    supplyMessage = "<ul>" +
+                        "<li>You have already done a good job! Keep it up!</li>" +
+                        "<li>We need the baby's date of birth to assess milk adequacy. Please ask the healthcare team to update it.</li>" +
+                        "</ul>";
                 } else if (todayMl >= minimalToday) {
                     supplyMessage = "<ul><li>You have already done a good job! Keep it up!</li></ul>";
                 } else {
                     supplyMessage = "<ul>" +
+                        "<li>You have already done a good job! Keep it up!</li>" +
                         "<li>Remember to do hand expression at least 6 to 8 times per day, and at least once at night.</li>" +
                         "<li>Combine both expression methods by using the breast pump first until the breast is soft and then hand express the remaining milk: When breastmilk has not yet \"come in,\" or is in low supply in early days, hand-expression is usually more effective. When the breasts are fuller, using a breast pump saves effort.</li>" +
                         "<li>Hand expressing or pumping milk should not cause any pain. Reach out for healthcare professionals if you are painful.</li>" +
