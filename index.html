@@ -69,6 +69,7 @@
         .fasting-message{font-size:16px;color:#8D3B3B;text-align:center;margin:18px 0;font-weight:600}
         .reminder-box{margin-top:12px;padding:12px;background:#FFF7F5;border-radius:12px;font-size:14px;border:1px solid var(--border)}
         .reminder-box ul, #celebration ul{margin:0;padding-left:20px}
+        .reminder-box ul ul, #celebration ul ul{margin-top:6px;padding-left:18px}
         .reminder-box li, #celebration li{margin-bottom:6px}
         .chat-log{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#FFF7F5;max-height:260px;overflow-y:auto}
         .chat-message{display:flex;flex-direction:column;margin-bottom:10px}
@@ -261,18 +262,23 @@
             "0-3": `
                 <ul>
                     <li>You have already done a good job! Keep it up!</li>
-                    <li>Focus on skin-to-skin contact if available (Please ask nurses for assistance)</li>
-                    <li>Frequent expression, at least 8 times per day (every 2–3 hours) even small amounts only</li>
-                    <li>At least express once at night time, since milk production hormone is very active at night time</li>
-                    <li>Hot pack / massage before expression can help milk flow become faster</li>
-                    <li>If you find your hand expression skills ineffective or need any assistance, please ask nurses</li>
+                    <li>Tips to increase milk supply:
+                        <ul>
+                            <li>Start as early as possible: express milk within 2 hours of delivery so you can feed your baby with colostrum and prevents delayed "milk come-in"</li>
+                            <li>Frequent expression, at least 8 times per 24 hours: removing milk from the breasts frequently will increase milk production</li>
+                            <li>At least express once at night: more milk-producing hormone is secreted at night time</li>
+                            <li>Focus on skin-to-skin contact with your baby if available (Please ask nurses for assistance): helps milk flow and reduce breastfeeding difficulties</li>
+                            <li>Warm compression on breast (less than 3 minutes) / gentle breast massage / relax yourself by listening to music, taking a warm shower, thinking of your baby, looking at baby's photos or videos can help milk flows faster</li>
+                            <li>If you find your hand expression skills ineffective or need any assistance, please ask nurses</li>
+                        </ul>
+                    </li>
                 </ul>
             `,
             "4-7": `
                 <ul>
-                    <li>You may start to feel your breasts are getting fuller on day 3 to 4. Please keep on expressing at least 8 times per day</li>
-                    <li>For mothers who have undergone C-section, there may be a delayed milk production progress. Please keep your expression and massage going</li>
-                    <li>The volume is estimated at around 50 to 350 ml/day, varies among different mothers</li>
+                    <li>You may start to feel the "milk comes in", which means breasts are getting fuller on day 3 to 4. Please keep on expressing at least 8 times per day.</li>
+                    <li>For mothers who have undergone C-section, there may be a delayed milk production progress. Please keep your expression and massage going.</li>
+                    <li>The volume is estimated at around 50 to 350 ml/day, varies among different mothers.</li>
                 </ul>
             `,
             "8+": `
@@ -322,7 +328,7 @@
             if (dol === null || Number.isNaN(dol)) {
                 return "<ul><li>Please ask the healthcare team to add the baby's date of birth so we can show day-based guidance.</li></ul>";
             }
-            if (dol <= 3) return dolReminders["0-3"];
+            if (dol <= 2) return dolReminders["0-3"];
             if (dol <= 7) return dolReminders["4-7"];
             return dolReminders["8+"];
         }
@@ -696,15 +702,22 @@
                 if (minimalToday === null) {
                     supplyMessage = "<ul><li>We need the baby's date of birth to assess milk adequacy. Please ask the healthcare team to update it.</li></ul>";
                 } else if (todayMl >= minimalToday) {
-                    supplyMessage = "<ul>" +
-                        "<li>You have already done a good job! Keep it up!</li>" +
-                        "<li>If you are getting more milk and faster milk flow during hand expression, you may try to use breast pump for 15 minutes per side</li>" +
-                        "</ul>";
+                    supplyMessage = "<ul><li>You have already done a good job! Keep it up!</li></ul>";
                 } else {
                     supplyMessage = "<ul>" +
-                        "<li>Remember to do hand expression at least 6 to 8 times per day, and at least once at night</li>" +
-                        "<li>Do you feel pain or engorgement in the breast? You may seek help from lactation consultant or the breastfeeding hotline at 2255 7381</li>" +
-                        "<li>Let us know how we may assist you via the \"Request Lactation Support\" function</li>" +
+                        "<li>Remember to do hand expression at least 6 to 8 times per day, and at least once at night.</li>" +
+                        "<li>Combine both expression methods by using the breast pump first until the breast is soft and then hand express the remaining milk: When breastmilk has not yet \"come in,\" or is in low supply in early days, hand-expression is usually more effective. When the breasts are fuller, using a breast pump saves effort.</li>" +
+                        "<li>Hand expressing or pumping milk should not cause any pain. Reach out for healthcare professionals if you are painful.</li>" +
+                        "<li>Do you feel pain or engorgement in the breast?</li>" +
+                        "<li>To relieve engorgement, you can:" +
+                        "<ul>" +
+                        "<li>Apply a cold compress to your breast using an icepack and cold towel</li>" +
+                        "<li>Take painkillers, such as paracetamol</li>" +
+                        "<li>Keep on expressing frequently</li>" +
+                        "</ul>" +
+                        "</li>" +
+                        "<li>If your breast engorgement exceeds 24 hours or milk does not \"come in\" on the 4th day after delivery, please seek help from lactation consultant or the breastfeeding hotline (2255 7381).</li>" +
+                        "<li>Let us know how we may assist you via the \"Request Lactation Support\" function.</li>" +
                         "</ul>";
                 }
 
