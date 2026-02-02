@@ -76,7 +76,6 @@
         .star-list li::before{content:"☆";position:absolute;left:0;color:var(--accent)}
         .update-banner{display:none;position:sticky;top:0;z-index:5;margin:10px 0;padding:10px 12px;background:#FFF0ED;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
         .update-banner p{margin:0;font-size:13px;color:var(--text)}
-        .update-banner button{margin-top:8px;width:auto;padding:8px 12px}
         .chat-log{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#FFF7F5;max-height:260px;overflow-y:auto}
         .chat-message{display:flex;flex-direction:column;margin-bottom:10px}
         .chat-message.mother .chat-bubble{background:#FFF0ED;align-self:flex-start}
@@ -92,8 +91,7 @@
     <div id="google_translate_element"></div>
 
     <div id="update-banner" class="update-banner">
-        <p>New update available. Please refresh to get the latest version.</p>
-        <button onclick="applyAppUpdate()">Refresh now</button>
+        <p>Updating to the latest version...</p>
     </div>
 
     <h1>Expressed Breast Milk (EBM) Collection App</h1>
@@ -259,7 +257,7 @@
         let motherChatSynced = false;
         let idleTimerId = null;
         const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
-        const APP_VERSION = "2026-01-30-01";
+        const VERSION_STORAGE_KEY = "ebm_app_version_tag";
         const hcwPassword = "hcwpass";
 
         // Minimal breast milk reference (ml/day by DOL range)
@@ -559,17 +557,44 @@
             window.location.replace(url.toString());
         }
 
+        function getVersionCheckUrl() {
+            const path = window.location.pathname;
+            const basePath = path.endsWith("/") ? `${path}index.html` : path;
+            return `${window.location.origin}${basePath}`;
+        }
+
+        function extractVersionTag(response) {
+            return response.headers.get("etag") || response.headers.get("last-modified") || "";
+        }
+
+        function handleVersionTag(tag) {
+            if (!tag) return;
+            const stored = localStorage.getItem(VERSION_STORAGE_KEY);
+            if (stored && stored !== tag) {
+                localStorage.setItem(VERSION_STORAGE_KEY, tag);
+                const banner = document.getElementById("update-banner");
+                if (banner) banner.style.display = "block";
+                setTimeout(applyAppUpdate, 1200);
+            } else if (!stored) {
+                localStorage.setItem(VERSION_STORAGE_KEY, tag);
+            }
+        }
+
         function checkForUpdates() {
-            fetch(`/version.json?v=${Date.now()}`, { cache: "no-store" })
-                .then(response => response.json())
-                .then(data => {
-                    if (!data || !data.version) return;
-                    if (data.version !== APP_VERSION) {
-                        const banner = document.getElementById("update-banner");
-                        if (banner) banner.style.display = "block";
-                    }
+            const url = getVersionCheckUrl();
+            fetch(url, { method: "HEAD", cache: "no-store" })
+                .then(response => {
+                    if (!response.ok) throw new Error("version check failed");
+                    handleVersionTag(extractVersionTag(response));
                 })
-                .catch(() => {});
+                .catch(() => {
+                    fetch(url, { cache: "no-store" })
+                        .then(response => {
+                            if (!response.ok) return;
+                            handleVersionTag(extractVersionTag(response));
+                        })
+                        .catch(() => {});
+                });
         }
 
         db.collection("users").onSnapshot(() => {
