@@ -249,6 +249,8 @@
         let motherChatUnsub = null;
         let hcwChatUnsub = null;
         let motherChatSynced = false;
+        let idleTimerId = null;
+        const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
         const hcwPassword = "hcwpass";
 
         // Minimal breast milk reference (ml/day by DOL range)
@@ -527,6 +529,21 @@
             });
         }
 
+        function resetIdleTimer() {
+            if (idleTimerId) {
+                clearTimeout(idleTimerId);
+            }
+            if (!currentUser) return;
+            idleTimerId = setTimeout(() => {
+                alert("You have been logged out due to inactivity.");
+                logout();
+            }, IDLE_TIMEOUT_MS);
+        }
+
+        function startIdleTracking() {
+            resetIdleTimer();
+        }
+
         db.collection("users").onSnapshot(() => {
             if (currentUser === 'hcw') updateBedsTable();
         });
@@ -586,6 +603,7 @@
                 populateBedSelect();
                 updateBedsTable();
                 loadChatBedList();
+                startIdleTracking();
                 return;
             }
 
@@ -597,6 +615,7 @@
                 document.getElementById('parent-section').style.display = 'block';
                 document.getElementById('current-bed').textContent = doc.data().displayId || id;
                 loadTodayData();
+                startIdleTracking();
             });
         }
 
@@ -612,6 +631,10 @@
                 hcwChatUnsub = null;
             }
             motherChatSynced = false;
+            if (idleTimerId) {
+                clearTimeout(idleTimerId);
+                idleTimerId = null;
+            }
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('parent-section').style.display = 'none';
             document.getElementById('hcw-section').style.display = 'none';
@@ -734,6 +757,14 @@
         function requestConsult() {
             document.getElementById('consult-form').style.display = 'block';
             initMotherChat();
+            const box = document.getElementById('consult-form');
+            const input = document.getElementById('consult-message');
+            if (box) {
+                box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            if (input) {
+                input.focus();
+            }
         }
 
         function submitConsult() {
@@ -915,6 +946,12 @@
                 a.click();
             });
         }
+
+        ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (currentUser) resetIdleTimer();
+            }, { passive: true });
+        });
 
     </script>
 </body>
