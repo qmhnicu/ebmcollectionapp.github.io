@@ -328,7 +328,7 @@
             if (dol === null || Number.isNaN(dol)) {
                 return "<ul><li>Please ask the healthcare team to add the baby's date of birth so we can show day-based guidance.</li></ul>";
             }
-            if (dol <= 2) return dolReminders["0-3"];
+            if (dol <= 3) return dolReminders["0-3"];
             if (dol <= 7) return dolReminders["4-7"];
             return dolReminders["8+"];
         }
