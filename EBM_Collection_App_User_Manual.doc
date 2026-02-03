@@ -1,0 +1,143 @@
+EBM COLLECTION APP USER MANUAL
+For Mothers and Ward Staff (Admin)
+
+Version: 1.0
+Date: 2026-01-30
+
+------------------------------------------------------------
+IMPORTANT NOTICE
+This application is solely for communication purposes.
+If you have any concerns regarding updates on your baby's condition or
+lactation support, please consult our team of doctors and nurses during
+visiting hours.
+------------------------------------------------------------
+
+TABLE OF CONTENTS
+1. Overview
+2. Mothers - Quick Start
+3. Mothers - Detailed Guide
+4. Ward Staff (Admin) - Quick Start
+5. Ward Staff (Admin) - Detailed Guide
+6. Auto Logout and Updates
+7. Tips and Troubleshooting
+
+------------------------------------------------------------
+1) OVERVIEW
+This app helps mothers record expressed breast milk (EBM) and shows
+day-of-life (DOL) guidance with reference targets. It also lets ward
+staff register beds, update baby information, and view daily totals.
+
+------------------------------------------------------------
+2) MOTHERS - QUICK START
+1. Login with your Bed ID and password.
+2. Enter:
+   - Volume per Bottle (ml)
+   - Number of Bottles
+3. Tap "Save Today's Provision".
+4. Review:
+   - Day of Life (DOL)
+   - Current Weight
+   - Tailored reminders
+   - Today's total and guidance
+
+------------------------------------------------------------
+3) MOTHERS - DETAILED GUIDE
+
+Login
+- Open the app and enter your ID and password.
+- Example ID: CTM01, LKM101, ABC08.
+- Case does not matter (bed23 and BED23 are the same).
+
+Baby Information
+- Day of Life (DOL) is calculated automatically from the baby's DOB.
+- Current weight is shown (if staff has updated it).
+- Tailored information appears under Baby Information:
+  - DOL 0-3: Tips to increase milk supply
+  - DOL 4-7: Guidance about milk coming in and expected volume
+
+Record Today's EBM
+- Enter volume per bottle and number of bottles.
+- Tap "Save Today's Provision".
+- You can update anytime on the same day (it will overwrite previous).
+
+Today's Total and Guidance
+- The app calculates the total milk for today.
+- If supply meets the reference:
+  "You have already done a good job! Keep it up!"
+- If supply is below reference, you will see supportive guidance.
+
+Refresh and Logout
+- Tap "Refresh" to re-load today's data.
+- Tap "Logout" when finished.
+
+------------------------------------------------------------
+4) WARD STAFF (ADMIN) - QUICK START
+1. Login as admin (HCW) with the staff password.
+2. Register new bed OR select an existing bed.
+3. Update DOB, weight, and feeding targets.
+4. View ward overview table and export data if needed.
+
+------------------------------------------------------------
+5) WARD STAFF (ADMIN) - DETAILED GUIDE
+
+Login
+- Enter ID: HCW
+- Enter the admin password.
+
+Register a New Bed
+- Enter Bed ID, password, DOB, and weight.
+- Click "Register Bed".
+
+Edit Bed Information
+- Select a bed from the dropdown.
+- Click the edit button (pencil icon) in the table.
+- Update DOB, weight, volume per bottle, and bottles per day.
+- Save changes.
+
+Ward Overview
+- The table shows:
+  - Bed ID
+  - Target total
+  - Mother's total
+  - PDBM required
+  - Last updated time
+  - Day of Life and weight
+
+Export Data
+- Click "Export Today's Data to Excel" to download a CSV file.
+
+Delete Bed
+- Select a bed and click "Delete Selected Bed".
+  (Use with caution - this permanently removes the bed record.)
+
+------------------------------------------------------------
+6) AUTO LOGOUT AND UPDATES
+
+Auto Logout (Security)
+- The app logs out automatically after 15 minutes of inactivity.
+- Any click, scroll, or typing resets the timer.
+
+Auto Updates
+- The app checks for updates and refreshes automatically when a new
+  version is detected.
+
+------------------------------------------------------------
+7) TIPS AND TROUBLESHOOTING
+
+If you cannot log in
+- Check that your ID and password are correct.
+- Ensure you are using the correct bed ID.
+
+If baby DOL or weight is missing
+- Ask ward staff to update the baby's DOB and weight.
+
+If totals look wrong
+- Tap "Refresh".
+- Ensure you entered today's volumes correctly.
+
+If the page looks outdated
+- Wait a few seconds for auto-refresh.
+- If needed, close and reopen the app.
+
+------------------------------------------------------------
+END OF MANUAL
