@@ -82,12 +82,14 @@
         .update-banner p{margin:0;font-size:13px;color:var(--text)}
         .trend-section{margin-top:16px}
         .trend-empty{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;display:none}
-        .trend-button{background:#FFE0B2;color:var(--text);box-shadow:none;margin-top:0}
-        .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:20;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
-        .modal-content{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);width:100%;max-width:720px;padding:16px}
+        .trend-button{background:#FFE0B2;color:var(--text);box-shadow:none;margin-top:0;width:auto;padding:6px 10px}
+        .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:20;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+        .modal.show{display:flex;}
+        .modal-content{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);width:100%;max-width:720px;max-height:90vh;overflow-y:auto;padding:16px}
         .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
         .modal-header h3{margin:0;text-align:left}
         .modal-close{width:auto;padding:8px 12px;background:#E7E0EC;color:var(--text);box-shadow:none;margin-top:0}
+        #admin-trend-chart{max-height:240px;}
     </style>
 </head>
 <body>
@@ -477,13 +479,15 @@
             const modal = document.getElementById('trend-modal');
             const title = document.getElementById('trend-modal-title');
             if (title) title.textContent = `Milk Supply Trend - ${displayId || bedId}`;
-            if (modal) modal.style.display = 'flex';
+            if (modal) modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
             loadSupplyTrend(bedId, 'admin-trend-chart', 'admin-trend-empty', 'admin');
         }
 
         function closeTrendModal() {
             const modal = document.getElementById('trend-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) modal.classList.remove('show');
+            document.body.style.overflow = '';
         }
 
         function calculatePdbmRequired(targetVol, targetBottles, motherVol, motherBottles) {
@@ -969,6 +973,14 @@
             syncLanguageSelector();
             checkForUpdates();
             setInterval(checkForUpdates, 5 * 60 * 1000);
+        });
+
+        document.getElementById('trend-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'trend-modal') closeTrendModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeTrendModal();
         });
 
     </script>
